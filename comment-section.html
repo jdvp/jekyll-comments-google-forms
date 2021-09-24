@@ -1,11 +1,13 @@
+{% assign site_chunked_comment_value = site.goole_forms_comments.chunked_comment_loading %}
+{% assign page_chunked_comment_value = page.chunked_comment_loading %}
+
 {% if site.comment-read %}
 <!-- Load Required 3rd-Party Scripts. We use the following: 
     * jquery for DOM manipulation
     * jquery-csv for parsing Google Sheets CSV data to JSON
     * validator for escaping user-entered comments to prevent malicious code input in comments
 
-    Make sure to update these to the latest versions every once in a while.
--->
+    Make sure to update these to the latest versions every once in a while. -->
 <script
 	src="https://code.jquery.com/jquery-3.6.0.min.js"
 	integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4="
@@ -19,10 +21,16 @@
 	integrity="sha512-vZEoK8xRncku4g5GANHh5zobUjeCMbZkSEahrADeAcRlk/1Ignf8sAKojkV4RZLkPw145+ILJFisI2pnjsPtGQ==" 
 	crossorigin="anonymous"></script>
 
-<!-- Our own JS starts here-->
+<!-- Our own JS starts here -->
 <script>
-	var thisPageUrl = "{{ include.url }}";
+	var thisPageUrl = "{{ page.url }}";
+	/*  Visbile comments are those already dislayed to the user.
+		Hidden comments are those that are already retrieved from Google Sheets but not shown yet (i.e. with a load more button visible).
+		Net new comments are those that have been added since the comment submit button was pressed. Usually this will be the single added
+		comment. */
 	var visibleComments = [];
+	var hiddenComments = [];
+	var netNewComments = [];
 
 	/* Format the comment's date to our desired format */
 	function formatDate(stringDate) {
@@ -35,47 +43,107 @@
 	/* Called when the comments have been loaded or relaoded.
 	   Comments that we have already displayed on the page will be ignored */
 	function displayComments(comments) {
+		var hasVisibleComments = visibleComments.length > 0;
+
 		/* if we have no comments, show the 'no comments available' section */
 		if (comments == null || comments === "") {
-			if (visibleComments.length == 0) {
+			if (!hasVisibleComments) {
 				$("#no-comments").show();
+				$("#load-more-comments").hide();
+				$("#num-comments-displayed").hide();
 			}
 			return;
 		}
 
 		/* Add headers so json objects are named properly */
 		comments = `timestamp,name,comment,isAuthor\n${comments}`;
-		commentList = $.csv.toObjects(comments);
+		var newHiddneComments = $.csv.toObjects(comments)
+			.map(item => JSON.stringify(item));
 
-		/* iterate over each comment that came from Google Sheets */
-		commentList.forEach(function(element) {
-			/* don't re-add existing comments */
-			if (visibleComments.includes(JSON.stringify(element))) {
-				return;
-			}
+		if (hasVisibleComments) {
+			netNewComments = newHiddneComments
+				.filter(item => !visibleComments.includes(item))
+				.filter(item => !hiddenComments.includes(item));
+		}
 
-			/* If the author was the one who commented back, add this 'verified' logic */
-			var verifiedAuthorTag = "";
-			if (element.isAuthor === "TRUE") {
-				verifiedAuthorTag = "&nbsp;<strong>(Author)</strong>";
-			}
+		hiddenComments = newHiddneComments
+			.filter(item => !visibleComments.includes(item))
+			.filter(item => !netNewComments.includes(item));
 
-			/* Create the new item using HTML and append it to the user-visible comment section */
-			var newItem = $(`
-				<div class="comment-item">
-					<p class="commenter-name">${validator.escape(element.name)}${verifiedAuthorTag}<small>${formatDate(element.timestamp)}</small></p>
-					<div>
-							<p>${validator.escape(element.comment).replace(new RegExp('\r?\n','g'), '<br />')}</p>
-					</div>
-					</div>
-			`).hide();
-			$("#commentSection").append(newItem);
-			newItem.fadeIn();
-			visibleComments.push(JSON.stringify(element));
+		loadMoreComments(false || !hasVisibleComments);
+	};
 
-			/* Hide the 'no comments available' section since we have added a comment */
-			$("#no-comments").hide();
-		});
+	/* Loads more comments if there are any left to display from those already loaded from the server */
+	function loadMoreComments(isLoadMoreAction) {
+
+		console.log("{{site_chunked_comment_value | inspect }}")
+		console.log("{{page_chunked_comment_value | inspect }}")
+		console.log("{{site_chunked_comment_loading_allowed | inspect }}")
+		console.log("{{page_chunked_comment_loading_allowed | inspect }}")
+
+		{% if page_chunked_comment_value == false %}
+			var newCommentsToDisplay = hiddenComments;
+		{% else %}
+			{% if site_chunked_comment_value == false and page_chunked_comment_value != true %}
+				var newCommentsToDisplay = hiddenComments;
+			{% else %}
+				var newCommentsToDisplay = hiddenComments.slice(-5);
+			{% endif %}
+		{% endif %}
+
+		if (isLoadMoreAction) {
+			/* iterate over each comment that came from Google Sheets */
+			newCommentsToDisplay.reverse().forEach(element => displaySingleComment(element, true));
+			hiddenComments = hiddenComments.filter(item => !newCommentsToDisplay.includes(item) && !visibleComments.includes(item));
+		} else {
+			/* add the new comments if there are any */
+			netNewComments.forEach(element => displaySingleComment(element, false));
+			netNewComments = []
+		}
+
+		$("#num-comments-displayed").text(`Showing ${visibleComments.length} comments out of ${visibleComments.length + hiddenComments.length}`);
+
+		if (hiddenComments.length == 0) {
+			$("#load-more-comments").hide();
+		} else {
+			$("#load-more-comments").show();
+		}
+	};
+
+	function displaySingleComment(element, isPrepend) {
+		/* don't re-add existing comments */
+		if (visibleComments.includes(element)) {
+			return;
+		}
+
+		var jsonElement = JSON.parse(element);
+
+		/* If the author was the one who commented back, add this 'verified' logic */
+		var verifiedAuthorTag = "";
+		if (jsonElement.isAuthor === "TRUE") {
+			verifiedAuthorTag = "&nbsp;<strong>(Author)</strong>";
+		}
+
+		/* Create the new item using HTML and append it to the user-visible comment section */
+		var newItem = $(`
+			<div class="comment-item">
+				<p class="commenter-name">${validator.escape(jsonElement.name)}${verifiedAuthorTag}<small>${formatDate(jsonElement.timestamp)}</small></p>
+				<div>
+						<p>${validator.escape(jsonElement.comment).replace(new RegExp('\r?\n','g'), '<br />')}</p>
+				</div>
+				</div>
+		`).hide();
+		if (isPrepend) {
+			$("#comment-container").prepend(newItem);
+		} else {
+			$("#comment-container").append(newItem);
+		}
+		newItem.fadeIn();
+		visibleComments.push(element);
+
+		/* Hide the 'no comments available' section since we have added a comment */
+		$("#no-comments").hide();
+		$("#num-comments-displayed").show();
 	};
 
 	/* Calls to the Google Sheets gviz API to load the comment data
@@ -135,13 +203,15 @@
 </script>
 <!--
 	HTML for displaying the actual comment section.
-	It has a state for oth when the article has comments and when it does not.
--->
+	It has a state for oth when the article has comments and when it does not. -->
 <h4 class="post-subtitle">Comments</h4>
-<div id="commentSection" class="comments">
+<div id="comment-section" class="comments">
+	<p id="num-comments-displayed"></p>
+	<button id="load-more-comments" onclick="loadMoreComments(true)" type="button">Load More Comments</button>
 	<div id="no-comments" class="post-info">
 		<p>There are currently no comments on this article, be the first to add one below</p>
 	</div>
+	<div id="comment-container"></div>
 </div>
 <h4 class="post-subtitle">Add a Comment</h4>
 <div class="comments">
@@ -161,110 +231,159 @@
 <!-- 
 	Styling information.
 	This might typically be in an scss file but is added here so only a single
-	file needs to be added to a project trying to implement this feature.
--->
+	file needs to be added to a project trying to implement this feature. -->
 <style>
-	@import url("https://fonts.googleapis.com/css?family=Source+Sans+Pro");
- .comment-item {
-	 position: relative;
-	 padding: 0.5em 2.5em;
-	 background: white;
-	 font-family: "Source Sans Pro", sans-serif;
-	 width: 95%;
-	 margin: 1em auto;
-	 box-shadow: 0px 0px 2px 2px rgba(0, 0, 0, 0.1);
-	 border-radius: 8px;
+@import url("https://fonts.googleapis.com/css?family=Source+Sans+Pro");
+.comment-item {
+	position: relative;
+	padding: 0.5em 2.5em;
+	background: white;
+	font-family: "Source Sans Pro", sans-serif;
+	width: 95%;
+	margin: 1em auto;
+	box-shadow: 0px 0px 2px 2px rgba(0, 0, 0, 0.1);
+	border-radius: 8px;
 }
- .comment-item:after {
-	 content: "";
-	 position: relative;
-	 display: block;
-	 clear: both;
+
+.comment-item:after {
+	content: "";
+	position: relative;
+	display: block;
+	clear: both;
 }
- .comment-item p {
-	 line-height: 1.6;
+
+.comment-item p {
+	line-height: 1.6;
 }
- .comment-item small {
-	 padding-left: 0.7em;
-	 color: #999;
-	 font-size: 0.8em;
+
+.comment-item small {
+	padding-left: 0.7em;
+	color: #999;
+	font-size: 0.8em;
 }
- .commenter-name {
-	 color: #367588;
-	 text-decoration: none;
-	 font-size: 1em;
-	 font-weight: 700;
+
+.commenter-name {
+	color: #367588;
+	text-decoration: none;
+	font-size: 1em;
+	font-weight: 700;
 }
- .commenter-name strong {
-	 color: #e91e63;
-	 text-decoration: none;
-	 font-size: 1em;
-	 font-weight: 700;
+
+.commenter-name strong {
+	color: #e91e63;
+	text-decoration: none;
+	font-size: 1em;
+	font-weight: 700;
 }
- .comments {
-	 border-top: 0.5px solid #e5e5e5;
-	 padding-top: 1rem;
-	 position: relative;
+
+.comments-form {
+	margin-left: 1em;
+	margin-right: 1em;
+	width: 95%;
+	font-family: "Source Sans Pro", sans-serif;
 }
- .comments-form {
-	 margin-left: 1em;
-	 margin-right: 1em;
-	 width: 95%;
-	 font-family: "Source Sans Pro", sans-serif;
+
+.comments-form ul {
+	list-style: none;
+	margin-left: -40px;
 }
- .comments-form ul {
-	 list-style: none;
-	 margin-left: -40px;
+
+.comments-form ul li {
+	margin-bottom: 15px;
 }
- .comments-form ul li {
-	 margin-bottom: 15px;
+
+.comments {
+	align-items: center;
+	border-top: 0.5px solid #e5e5e5;
+	padding-top: 1rem;
+	position: relative;
 }
- .comments-form ul li input[type='submit'] {
-	 border: 0;
-	 border-radius: 8px;
-	 padding: 10px 10px;
-	 background: #9ccc65;
-	 color: #fff;
-	 font-family: "Source Sans Pro", sans-serif;
-	 font-weight: bold;
-	 font-size: 0.9em;
-	 text-transform: uppercase;
-	 margin-bottom: 20px;
-	 width: 25%;
-	 outline-style: none;
+
+#comment-submit,
+#load-more-comments {
+	border: 0;
+	border-radius: 8px;
+	background: #9ccc65;
+	color: #fff;
+	font-family: "Source Sans Pro", sans-serif;
+	font-weight: bold;
+	font-size: 0.9em;
+	text-transform: uppercase;
+	margin-bottom: 20px;
+	outline-style: none;
 }
- .comments-form ul li input[type='text'], .comments-form ul li textarea {
-	 width: 50%;
-	 padding: 10px;
-	 border: 0;
-	 border-radius: 8px;
-	 background: #f7f7f7;
-	 font-family: "Source Sans Pro", sans-serif;
+
+#comment-submit {
+	padding: 10px 10px;
+	width: 25%;
 }
- .comments-form ul li input[type='text']::-webkit-input-placeholder, .comments-form ul li textarea::-webkit-input-placeholder {
-	 font-family: "Source Sans Pro", sans-serif;
+
+#load-more-comments {
+	padding: 10px 20px;
+	width: auto;
 }
- .comments-form ul li input[type='text']::-moz-placeholder, .comments-form ul li textarea::-moz-placeholder {
-	 font-family: "Source Sans Pro", sans-serif;
+
+#load-more-comments,
+#num-comments-displayed {
+	display: none;
 }
- .comments-form ul li input[type='text']:-ms-input-placeholder, .comments-form ul li textarea:-ms-input-placeholder {
-	 font-family: "Source Sans Pro", sans-serif;
+
+#comment-name,
+#comment-comment {
+	width: 50%;
+	padding: 10px;
+	border: 0;
+	border-radius: 8px;
+	background: #f7f7f7;
+	font-family: "Source Sans Pro", sans-serif;
 }
- .comments-form ul li input[type='text']::-ms-input-placeholder, .comments-form ul li textarea::-ms-input-placeholder {
-	 font-family: "Source Sans Pro", sans-serif;
+
+#comment-name::-webkit-input-placeholder,
+#comment-comment::-webkit-input-placeholder {
+	font-family: "Source Sans Pro", sans-serif;
 }
- .comments-form ul li input[type='text']::placeholder, .comments-form ul li textarea::placeholder {
-	 font-family: "Source Sans Pro", sans-serif;
+
+#comment-name::-moz-placeholder,
+#comment-comment::-moz-placeholder {
+	font-family: "Source Sans Pro", sans-serif;
 }
- .comments-form ul li input[type='text']:focus, .comments-form ul li textarea:focus {
-	 background: #fff;
-	 font-family: "Source Sans Pro", sans-serif;
+
+#comment-name:-ms-input-placeholder,
+#comment-comment:-ms-input-placeholder {
+	font-family: "Source Sans Pro", sans-serif;
 }
- .comments-form ul li textarea {
-	 width: 100%;
-	 height: 80px;
-	 resize: vertical;
-	 min-height: 80px;
+
+#comment-name::-ms-input-placeholder,
+#comment-comment::-ms-input-placeholder {
+	font-family: "Source Sans Pro", sans-serif;
+}
+
+#comment-name::placeholder,
+#comment-comment::placeholder {
+	font-family: "Source Sans Pro", sans-serif;
+}
+
+#comment-name:focus,
+#comment-comment:focus {
+	background: #fff;
+	font-family: "Source Sans Pro", sans-serif;
+}
+
+#comment-comment {
+	width: 100%;
+	height: 80px;
+	resize: vertical;
+	min-height: 80px;
+}
+
+#comment-container {
+	width: 100%;
+}
+
+#comment-section {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
 }
 </style>
 {% endif %}
