@@ -1,10 +1,21 @@
-{% assign site_chunked_comment_value = site.goole_forms_comments.chunked_comment_loading %}
-{% assign page_chunked_comment_value = page.chunked_comment_loading %}
+{% comment %} 
+	This section is to determine whether or not chunked comment loading is enabled.
+	By default this is turned ON. If the page has enabled or disabled this feature explicitly,
+	the individual page value is used. Otherwise the site's value, if any, is used.
+{% endcomment %}
+{% assign chunked_loading_enabled = true %}
+{% if page.chunked_comment_loading == false %}
+	{% assign chunked_loading_enabled = false %}
+{% else %}
+	{% if site.goole_forms_comments.chunked_comment_loading == false and page.chunked_comment_loading != true %}
+		{% assign chunked_loading_enabled = false %}
+	{% endif %}
+{% endif %}
 
 {% comment %} 
 	This section is to determine whether or not lazy loading of the comments is enabled.
-	By default this is turned off. If the page has enabled or disabled this feature explicitly,
-	the individual page value is used. Otherwise the site's value, if any is used.
+	By default this is turned OFF. If the page has enabled or disabled this feature explicitly,
+	the individual page value is used. Otherwise the site's value, if any, is used.
 {% endcomment %}
 {% assign lazy_load_enabled = false %}
 {% if page.lazy_load_comments == true %}
@@ -154,14 +165,10 @@
 	/* Loads more comments if there are any left to display from those already loaded from the server */
 	{% endcomment %}
 	function loadMoreComments(isLoadMoreAction) {
-		{% if page_chunked_comment_value == false %}
-			var newCommentsToDisplay = hiddenComments;
+		{% if chunked_loading_enabled  %}
+			var newCommentsToDisplay = hiddenComments.slice(-5);
 		{% else %}
-			{% if site_chunked_comment_value == false and page_chunked_comment_value != true %}
-				var newCommentsToDisplay = hiddenComments;
-			{% else %}
-				var newCommentsToDisplay = hiddenComments.slice(-5);
-			{% endif %}
+			var newCommentsToDisplay = hiddenComments;
 		{% endif %}
 
 		if (isLoadMoreAction) {
