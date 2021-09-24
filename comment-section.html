@@ -185,7 +185,7 @@
 			netNewComments = []
 		}
 
-		$("#num-comments-displayed").text(`Showing ${visibleComments.length} comments out of ${visibleComments.length + hiddenComments.length}`);
+		$("#num-comments-displayed").text(`Showing ${visibleComments.length} of ${visibleComments.length + hiddenComments.length} comments`);
 
 		if (hiddenComments.length == 0) {
 			$("#load-more-comments").hide();
@@ -312,7 +312,7 @@
 <div id="comments-and-input">
 	<div id="comment-section" class="comments">
 		<p id="num-comments-displayed"></p>
-		<button id="load-more-comments" class="comment-button" onclick="loadMoreComments(true)" type="button">Load More Comments</button>
+		<button id="load-more-comments" class="comment-button" onclick="loadMoreComments(true)" type="button">Load Older Comments</button>
 		<div id="no-comments" class="post-info">
 			<p>There are currently no comments on this article, be the first to add one below</p>
 		</div>
