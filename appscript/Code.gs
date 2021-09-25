@@ -84,7 +84,7 @@ function doPost(req) {
     if (!sucess) {
       return getError("reCAPTCHA is required but appears to be misconfigured on the site")
     }
-    var score = recaptchaResponse.score;
+    var score = recaptchaResponse.score || 0;
     if (score < RECAPTCHA_THRESHOLD) {
       return getError("reCAPTCHA suspects bot behavior, please try again in a bit")
     }
