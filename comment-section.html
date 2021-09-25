@@ -7,7 +7,7 @@
 {% if page.chunked_comment_loading == false %}
 	{% assign chunked_loading_enabled = false %}
 {% else %}
-	{% if site.goole_forms_comments.chunked_comment_loading == false and page.chunked_comment_loading != true %}
+	{% if site.google_forms_comments.chunked_comment_loading == false and page.chunked_comment_loading != true %}
 		{% assign chunked_loading_enabled = false %}
 	{% endif %}
 {% endif %}
@@ -20,7 +20,7 @@
 {% assign lazy_load_enabled = false %}
 {% if page.lazy_load_comments == true %}
 	{% assign lazy_load_enabled = true %}
-{% elsif site.goole_forms_comments.lazy_load_comments == true %}
+{% elsif site.google_forms_comments.lazy_load_comments == true %}
 	{% unless page.lazy_load_comments == false %}
 		{% assign lazy_load_enabled = true %}
 	{% endunless %}
@@ -30,11 +30,11 @@
 	This section is to determine whether or recaptcha is enabled.
 {% endcomment %}
 {% assign recaptcha_enabled = false %}
-{% if site.goole_forms_comments.recaptcha_site_key %}
+{% if site.google_forms_comments.recaptcha_site_key %}
 	{% assign recaptcha_enabled = true %}
 {% endif %}
 
-{% if site.comment-read or site.goole_forms_comments.google_app_script %}
+{% if site.comment-read or site.google_forms_comments.google_app_script %}
 <script>
 
 	{% comment %}
@@ -103,7 +103,7 @@
 	   JQuery and other scripts once we actually need them */
     {% endcomment %}
 	async function initialCommentLoad() {
-		{% unless site.goole_forms_comments.google_app_script %}
+		{% unless site.google_forms_comments.google_app_script %}
 		{% comment %}
 		/* Load JQuery */
 		{% endcomment %}
@@ -118,7 +118,7 @@
 		/* Load Recaptcha */
     	{% endcomment %}
 		var loadRecaptcha = document.createElement("script");
-		loadRecaptcha.src = "https://www.google.com/recaptcha/api.js?render={{ site.goole_forms_comments.recaptcha_site_key }}";
+		loadRecaptcha.src = "https://www.google.com/recaptcha/api.js?render={{ site.google_forms_comments.recaptcha_site_key }}";
 		document.head.appendChild(loadRecaptcha);
 		{% endif %} 
 
@@ -137,7 +137,7 @@
 		{% endif %} 
 		await loadValidator.onload;
 
-		{% if site.goole_forms_comments.google_app_script %}
+		{% if site.google_forms_comments.google_app_script %}
 		reloadComments();
 		{% else %}
 		loadJquery.onload = function() {
@@ -219,7 +219,7 @@
 			return;
 		}
 
-		{% if site.goole_forms_comments.google_app_script %}
+		{% if site.google_forms_comments.google_app_script %}
 		var newHiddneComments = comments
 			.sort((a, b) => (new Date(a.timestamp).getTime() || 0) - (new Date(b.timestamp).getTime() || 0))
 			.map(item => JSON.stringify(item));
@@ -321,9 +321,9 @@
 		show("num-comments-displayed");
 	};
 
-	{% if site.goole_forms_comments.google_app_script %}
+	{% if site.google_forms_comments.google_app_script %}
 	function reloadComments() {
-		fetch(`{{ site.goole_forms_comments.google_app_script }}?url=${thisPageUrl}`)
+		fetch(`{{ site.google_forms_comments.google_app_script }}?url=${thisPageUrl}`)
 		.then(response => response.json())
 		.then(response => displayComments(response));
 		
@@ -370,7 +370,7 @@
 		disablePostCommentButton();
         grecaptcha.ready(function() {
         	var pageAction = "comment_submit_{{ page.title }}".replace(/[^A-Za-z/_]/g, "")
-        	grecaptcha.execute('{{ site.goole_forms_comments.recaptcha_site_key }}', { action: pageAction }).then(function(token) {
+        	grecaptcha.execute('{{ site.google_forms_comments.recaptcha_site_key }}', { action: pageAction }).then(function(token) {
         		postComment(token);
         	});
         });
@@ -381,13 +381,13 @@
 	{% comment %}
 	/* Posts a comment */
 	{% endcomment %}
-	{% if site.goole_forms_comments.google_app_script %}
+	{% if site.google_forms_comments.google_app_script %}
 	function postComment(recaptchaToken) {
 		disablePostCommentButton();
 		var username = getValue("comment-name");
 		var comment = getValue("comment-comment");
 
-		fetch(`{{ site.goole_forms_comments.google_app_script }}`, {
+		fetch(`{{ site.google_forms_comments.google_app_script }}`, {
 		  method: 'POST',
 		  mode: 'cors',
 		  redirect: "follow",
@@ -475,7 +475,7 @@
 	<div class="comments">
 		<div class="comment-info-text">
 			<p>Note that I may remove comments for any reason, so try to be civil. If you are looking for a response to your comment, either leave your email address or check back on this page periodically.</p>
-			{% if site.goole_forms_comments.google_app_script %}
+			{% if site.google_forms_comments.google_app_script %}
 			<p id="comment-submit-error"></p>
 			{% endif %}
 		</div>	
@@ -709,7 +709,7 @@ https://developers.google.com/recaptcha/docs/faq#id-like-to-hide-the-recaptcha-b
 }
 {% endif %}
 
-{% if site.goole_forms_comments.google_app_script %}
+{% if site.google_forms_comments.google_app_script %}
 #comment-submit-error {
 	color: red;
 	display: none;
