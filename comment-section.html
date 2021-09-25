@@ -26,6 +26,14 @@
 	{% endunless %}
 {% endif %}
 
+{% comment %} 
+	This section is to determine whether or recaptcha is enabled.
+{% endcomment %}
+{% assign recaptcha_enabled = false %}
+{% if site.goole_forms_comments.recaptcha_site_key %}
+	{% assign recaptcha_enabled = true %}
+{% endif %}
+
 {% if site.comment-read or site.goole_forms_comments.google_app_script %}
 <script>
 
@@ -77,12 +85,6 @@
 
     	Make sure to update these to the latest versions every once in a while. */
     {% endcomment %}
-	var SRC_VALIDATOR = "https://cdnjs.cloudflare.com/ajax/libs/validator/13.5.2/validator.min.js";
-
-	{% unless site.goole_forms_comments.google_app_script %}
-	var SRC_JQUERY = "https://code.jquery.com/jquery-3.6.0.min.js";
-	var SRC_JQUERY_CSV = "https://cdnjs.cloudflare.com/ajax/libs/jquery-csv/1.0.11/jquery.csv.min.js";
-	{% endunless %}
 
 	{% comment %}
 	/* Initial load of the comments section contnet. This ensures that we are only loading
@@ -95,20 +97,32 @@
 		{% endcomment %}
 		var loadJquery = document.createElement("script");
 		loadJquery.type = "text/javascript";
-		loadJquery.src = SRC_JQUERY;
+		loadJquery.src = "https://code.jquery.com/jquery-3.6.0.min.js";
 		document.head.appendChild(loadJquery);
 		{% endunless %}
+
+		{% if recaptcha_enabled %}
+		{% comment %}
+		/* Load Recaptcha */
+    	{% endcomment %}
+		var loadRecaptcha = document.createElement("script");
+		loadRecaptcha.src = "https://www.google.com/recaptcha/api.js?render={{ site.goole_forms_comments.recaptcha_site_key }}";
+		document.head.appendChild(loadRecaptcha);
+		{% endif %} 
 
 		{% comment %}
 		/* Load Validator (to ensure we don't run code from comments for example) */
     	{% endcomment %}
 		var loadValidator = document.createElement("script");
-		loadValidator.src = SRC_VALIDATOR;
+		loadValidator.src = "https://cdnjs.cloudflare.com/ajax/libs/validator/13.5.2/validator.min.js";
 		document.head.appendChild(loadValidator);
 
 		{% comment %}
-		/* Await Validator & JQuery Loaded */
+		/* Await Scripts Loaded */
     	{% endcomment %}
+		{% if recaptcha_enabled %}
+		await loadRecaptcha.onload;
+		{% endif %} 
 		await loadValidator.onload;
 
 		{% if site.goole_forms_comments.google_app_script %}
@@ -128,7 +142,7 @@
 					/* Load JQuery CSV (need regular JQuery first) */
 					{% endcomment %}
 					var loadJqueryCsv = document.createElement("script");
-					loadJqueryCsv.src = SRC_JQUERY_CSV;
+					loadJqueryCsv.src = "https://cdnjs.cloudflare.com/ajax/libs/jquery-csv/1.0.11/jquery.csv.min.js";
 					document.head.appendChild(loadJqueryCsv);
 
 					{% comment %}
@@ -272,9 +286,9 @@
 		var newItem = document.createElement("div");
 		newItem.classList.add("comment-item");
 		newItem.innerHTML = `
-			<p class="commenter-name">${validator.escape(jsonElement.name)}${verifiedAuthorTag}<small>${formatDate(jsonElement.timestamp)}</small></p>
+			<p class="commenter-name">${validator.escape(jsonElement.name.toString())}${verifiedAuthorTag}<small>${formatDate(jsonElement.timestamp)}</small></p>
 			<div>
-					<p>${validator.escape(jsonElement.comment).replace(new RegExp('\r?\n','g'), '<br />')}</p>
+					<p>${validator.escape(jsonElement.comment.toString()).replace(new RegExp('\r?\n','g'), '<br />')}</p>
 			</div>
 		`.trim();
 		if (isPrepend) {
@@ -333,11 +347,23 @@
 	        .join('&');
 	};
 
+	{% if recaptcha_enabled %}
+	function checkRecaptcha() {
+        grecaptcha.ready(function() {
+        	var pageAction = "comment_submit_{{ page.title }}".replace(/[^A-Za-z/_]/g, "")
+        	grecaptcha.execute('{{ site.goole_forms_comments.recaptcha_site_key }}', { action: pageAction }).then(function(token) {
+        		postComment(token);
+        	});
+        });
+        return false;
+    };
+	{% endif %}
+
 	{% comment %}
 	/* Posts a comment */
 	{% endcomment %}
 	{% if site.goole_forms_comments.google_app_script %}
-	function postComment() {
+	function postComment(recaptchaToken) {
 		var username = getValue("comment-name");
 		var comment = getValue("comment-comment");
 
@@ -349,9 +375,10 @@
 		    "Content-Type": "text/plain;charset=utf-8"
 		  },
 		  body: JSON.stringify({
-		  	url : thisPageUrl,
-		  	name : username,
-		  	comment : comment
+		  	url : thisPageUrl?.toString(),
+		  	name : username?.toString(),
+		  	comment : comment?.toString(),
+		  	recaptchaToken: (recaptchaToken || null)
 		  })
 		}).then(response => response.json())
 		.then(response => {
@@ -373,7 +400,7 @@
 		return false;
 	};
 	{% else %}
-	function postComment() {
+	function postComment(recaptchaToken) {
 		var username = getValue("comment-name");
 		var comment = getValue("comment-comment");
 
@@ -384,9 +411,9 @@
 		    "Content-Type": "application/x-www-form-urlencoded"
 		  },
 		  body: encodeFormData({
-		  	"{{ site.comment-post-fields[0] }}" : thisPageUrl,
-		  	"{{ site.comment-post-fields[1] }}" : username,
-		  	"{{ site.comment-post-fields[2] }}" : comment
+		  	"{{ site.comment-post-fields[0] }}" : thisPageUrl?.toString(),
+		  	"{{ site.comment-post-fields[1] }}" : username?.toString(),
+		  	"{{ site.comment-post-fields[2] }}" : comment?.toString()
 		  })
 		}).then(response => {
 			setValue("comment-name", '');
@@ -416,26 +443,36 @@
 	<div id="comment-section" class="comments">
 		<p id="num-comments-displayed"></p>
 		<button id="load-more-comments" class="comment-button" onclick="loadMoreComments(true)" type="button">Load Older Comments</button>
-		<div id="no-comments" class="post-info">
+		<div id="no-comments" class="comment-info-text">
 			<p>There are currently no comments on this article, be the first to add one below</p>
 		</div>
 		<div id="comment-container"></div>
 	</div>
 	<h4 class="post-subtitle">Add a Comment</h4>
 	<div class="comments">
-		<div class="post-info">
+		<div class="comment-info-text">
 			<p>Note that I may remove comments for any reason, so try to be civil. If you are looking for a response to your comment, either leave your email address or check back on this page periodically.</p>
 			{% if site.goole_forms_comments.google_app_script %}
 			<p id="comment-submit-error"></p>
 			{% endif %}
 		</div>	
 		<div class="comments-form">
+			{% if recaptcha_enabled %}
+			<form onsubmit="return checkRecaptcha()" id="comment-form" autocomplete="off">
+			{% else %}
 			<form onsubmit="return postComment()" id="comment-form" autocomplete="off">
+			{% endif %}
 				<ul>
 					<li><input id="comment-name" name="username" type="text" placeholder="Name" required="" value=""></li>
 					<li><textarea id="comment-comment" name="comment" placeholder="Comment" required=""></textarea></li>
 					<li><input id="comment-submit" type="submit" value="Post" class="comment-button"></li>
 				</ul>
+				{% if recaptcha_enabled %}
+				<p id="comment-recaptcha-disclaimer">This site is protected by reCAPTCHA and the Google
+				    <a href="https://policies.google.com/privacy">Privacy Policy</a> and
+				    <a href="https://policies.google.com/terms">Terms of Service</a> apply.
+				 {% endif %}
+				<p>
 			</form>
 		</div>
 	</div>
@@ -590,12 +627,42 @@
 	min-height: 80px;
 }
 
+{% if recaptcha_enabled %}
+{% comment %}
+If you want to use the regular recaptcha badge (instead of the text currently below
+the submit button), remove this and the text disclaimer in the HTML above. Note that
+according to their FAQ page, one or the other must be displayed.
+https://developers.google.com/recaptcha/docs/faq#id-like-to-hide-the-recaptcha-badge.-what-is-allowed
+{% endcomment %}
+.grecaptcha-badge {
+	visibility: hidden;
+}
+
+#comment-recaptcha-disclaimer {
+	text-align: justify;
+    text-align-last: center;
+    font-size: .7em;
+	font-family: "Source Sans Pro", sans-serif;
+}
+{% endif %}
+
 {% if site.goole_forms_comments.google_app_script %}
 #comment-submit-error {
 	color: red;
 	display: none;
 }
 {% endif %}
+
+.comment-info-text {
+	letter-spacing: 0.5px;
+    text-align: center;
+}
+.comment-info-text p {
+	margin: 0 0 1rem;
+	text-align: justify;
+    text-align-last: center;
+    font-size: .9em;
+}
 
 #comment-container {
 	width: 100%;

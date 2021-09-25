@@ -1,5 +1,7 @@
 var COMMENT_FORM_ID = ""; //TODO
 var COMMENT_SHEET_ID = ""; //TODO
+var RECAPTCHA_SECRET_KEY = ""; //TODO
+var RECAPTCHA_THRESHOLD = .4;
 
 function doGet(req) {
   var url = req?.parameter?.url || null
@@ -19,16 +21,16 @@ function doGet(req) {
 
   /* Ensure required rows are there, technically isAuthor is not required, so we don't check for it at this point */
   if (columnTimestamp < 0) {
-    return getError("Can't find timestamp column in Google Sheet");
+    return getError("Can't find 'timestamp' column in Google Sheet");
   }
   if (columnUrl < 0) {
-    return getError("Can't find url column in Google Sheet");
+    return getError("Can't find 'article url' column in Google Sheet");
   }
   if (columnName < 0) {
-    return getError("Can't find name column in Google Sheet");
+    return getError("Can't find 'name' column in Google Sheet");
   }
   if (columnComment < 0) {
-    return getError("Can't find comment column in Google Sheet");
+    return getError("Can't find 'comment' column in Google Sheet");
   }
 
   var values = sh.getSheetValues(2, 1, sh.getLastRow() - 1, sh.getLastColumn())
@@ -61,16 +63,39 @@ function getError(errorText) {
 function doPost(req) {
   var bodyData = JSON.parse(req?.postData?.contents || "{}")
 
+  /* TODO uncomment this if using recaptcha and want server-side validation
+
+  var recaptchaToken = bodyData?.recaptchaToken || null;
+  if (recaptchaToken == null) {
+    return getError("POST body missing required 'recaptchaToken' paramter (which must also be non-empty)");
+  }
+
+  var formData = {
+    "secret": RECAPTCHA_SECRET_KEY,
+    "response": recaptchaToken
+  };
+  var options = {
+    "method" : "post",
+    "payload" : formData
+  };
+  try {
+    var recaptchaResponse = JSON.parse(UrlFetchApp.fetch("https://www.google.com/recaptcha/api/siteverify", options).getContentText());
+    var sucess = recaptchaResponse.success || false;
+    if (!sucess) {
+      return getError("reCAPTCHA is required but appears to be misconfigured on the site")
+    }
+    var score = recaptchaResponse.score;
+    if (score < RECAPTCHA_THRESHOLD) {
+      return getError("reCAPTCHA suspects bot behavior, please try again in a bit")
+    }
+  } catch {
+    return getError("reCAPTCHA could not be verified");
+  }
+  */
+  
   var url = bodyData?.url || null;
   var name = bodyData?.name || null;
   var comment = bodyData?.comment || null;
-  
-  console.info("url is "+ url);
-  console.info("name is "+ name);
-  console.info("comment is "+ comment);
-  Logger.log("url is "+ url);
-  Logger.log("name is "+ name);
-  Logger.log("comment is "+ comment);
 
   if (url == null || url == "") {
     return getError("POST body missing required 'url' paramter (which must also be non-empty)");
