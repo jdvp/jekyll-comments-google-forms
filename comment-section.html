@@ -26,7 +26,7 @@
 	{% endunless %}
 {% endif %}
 
-{% if site.comment-read %}
+{% if site.comment-read or site.goole_forms_comments.google_app_script %}
 <script>
 	{% comment %}
 	/* Load Required 3rd-Party Scripts. We use the following: 
@@ -38,15 +38,19 @@
     {% endcomment %}
 	var SRC_JQUERY = "https://code.jquery.com/jquery-3.6.0.min.js";
 	var SRC_VALIDATOR = "https://cdnjs.cloudflare.com/ajax/libs/validator/13.5.2/validator.min.js";
-	var SRC_JQUERY_CSV = "https://cdnjs.cloudflare.com/ajax/libs/jquery-csv/1.0.11/jquery.csv.min.js";
 
+	{% unless site.goole_forms_comments.google_app_script %}
+	var SRC_JQUERY_CSV = "https://cdnjs.cloudflare.com/ajax/libs/jquery-csv/1.0.11/jquery.csv.min.js";
+	{% endunless %}
 
 	{% comment %}
 	/* Initial load of the comments section contnet. This ensures that we are only loading
 	   JQuery and other scripts once we actually need them */
     {% endcomment %}
 	async function initialCommentLoad() {
+		{% comment %}
 		/* Load JQuery */
+		{% endcomment %}
 		var loadJquery = document.createElement("script");
 		loadJquery.type = "text/javascript";
 		loadJquery.src = SRC_JQUERY;
@@ -72,6 +76,8 @@
 					return false;
 				} else {
 					clearTimeout(interval);
+
+					{% unless site.goole_forms_comments.google_app_script %}
 					{% comment %}
 					/* Load JQuery CSV (need regular JQuery first) */
 					{% endcomment %}
@@ -83,6 +89,7 @@
 					/* Wait for JQuery CSV to finish loading */
 					{% endcomment %}
 					await loadJqueryCsv.onload;
+					{% endunless %}
 
 					{% comment %}
 					/* Now, load the comments */
@@ -132,7 +139,7 @@
 		{% comment %}
 		/* if we have no comments, show the 'no comments available' section */
 		{% endcomment %}
-		if (comments == null || comments === "") {
+		if (comments == null || comments === "" || comments == []) {
 			if (!hasVisibleComments) {
 				$("#no-comments").show();
 				$("#load-more-comments").hide();
@@ -141,12 +148,16 @@
 			return;
 		}
 
+		{% if site.goole_forms_comments.google_app_script %}
+		var newHiddneComments = comments.map(item => JSON.stringify(item));
+		{% else %}
 		{% comment %}
 		/* Add headers so json objects are named properly */
 		{% endcomment %}
 		comments = `timestamp,name,comment,isAuthor\n${comments}`;
 		var newHiddneComments = $.csv.toObjects(comments)
 			.map(item => JSON.stringify(item));
+		{% endif %}
 
 		if (hasVisibleComments) {
 			netNewComments = newHiddneComments
@@ -207,7 +218,7 @@
 		/* If the author was the one who commented back, add this 'verified' logic */
 		{% endcomment %}
 		var verifiedAuthorTag = "";
-		if (jsonElement.isAuthor === "TRUE") {
+		if (jsonElement.isAuthor == true || jsonElement.isAuthor === "TRUE") {
 			verifiedAuthorTag = "&nbsp;<strong>(Author)</strong>";
 		}
 		{% comment %}
@@ -236,11 +247,19 @@
 		$("#num-comments-displayed").show();
 	};
 
+	{% if site.goole_forms_comments.google_app_script %}
+	function reloadComments() {
+		fetch(`{{ site.goole_forms_comments.google_app_script }}?url=${thisPageUrl}`)
+		.then(response => response.json())
+		.then(response => displayComments(response));
+		
+	};
+	{% else %}
 	{% comment %}
 	/* Calls to the Google Sheets gviz API to load the comment data
 	   Since we are storing comments for all of our blog articles in one sheet, we filter
 	   by page URL. */
-   {% endcomment %}
+	{% endcomment %}
 	function reloadComments() {
 		{% comment %}
 		/*
@@ -258,6 +277,7 @@
 		.then(response => response.text())
 		.then(response => displayComments(response));
 	};
+	{% endif %}
 
 	{% comment %}
 	/* encodes the form data for http transport */
@@ -271,6 +291,43 @@
 	{% comment %}
 	/* Posts a comment */
 	{% endcomment %}
+	{% if site.goole_forms_comments.google_app_script %}
+	function postComment() {
+		var username = $("#comment-name").val();
+		var comment = $("#comment-comment").val();
+
+		fetch(`{{ site.goole_forms_comments.google_app_script }}`, {
+		  method: 'POST',
+		  mode: 'cors',
+		  redirect: "follow",
+		  headers: {
+		    "Content-Type": "text/plain;charset=utf-8"
+		  },
+		  body: JSON.stringify({
+		  	url : thisPageUrl,
+		  	name : username,
+		  	comment : comment
+		  })
+		}).then(response => response.json())
+		.then(response => {
+			var error = response?.error || null;
+			if (error != null) {
+				console.error(error)
+				$("#comment-submit-error").text(error);
+				$("#comment-submit-error").show();
+			} else {
+				$("#comment-name").val('');
+				$("#comment-comment").val('');
+				$("#comment-submit-error").text('');
+				$("#comment-submit-error").hide();
+				displayComments(response);
+			}
+		})
+		.catch(error => {console.log(error);});
+
+		return false;
+	};
+	{% else %}
 	function postComment() {
 		var username = $("#comment-name").val();
 		var comment = $("#comment-comment").val();
@@ -295,6 +352,7 @@
 
 		return false;
 	};
+	{% endif %}
 
 	{% unless lazy_load_enabled %}
 		initialCommentLoad();
@@ -322,6 +380,9 @@
 	<div class="comments">
 		<div class="post-info">
 			<p>Note that I may remove comments for any reason, so try to be civil. If you are looking for a response to your comment, either leave your email address or check back on this page periodically.</p>
+			{% if site.goole_forms_comments.google_app_script %}
+			<p id="comment-submit-error"></p>
+			{% endif %}
 		</div>	
 		<div class="comments-form">
 			<form onsubmit="return postComment()" id="comment-form" autocomplete="off">
@@ -483,6 +544,13 @@
 	resize: vertical;
 	min-height: 80px;
 }
+
+{% if site.goole_forms_comments.google_app_script %}
+#comment-submit-error {
+	color: red;
+	display: none;
+}
+{% endif %}
 
 #comment-container {
 	width: 100%;
