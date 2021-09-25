@@ -208,13 +208,16 @@
 		}
 
 		{% if site.goole_forms_comments.google_app_script %}
-		var newHiddneComments = comments.map(item => JSON.stringify(item));
+		var newHiddneComments = comments
+			.sort((a, b) => (new Date(a.timestamp).getTime() || 0) - (new Date(b.timestamp).getTime() || 0))
+			.map(item => JSON.stringify(item));
 		{% else %}
 		{% comment %}
 		/* Add headers so json objects are named properly */
 		{% endcomment %}
 		comments = `timestamp,name,comment,isAuthor\n${comments}`;
 		var newHiddneComments = $.csv.toObjects(comments)
+			.sort((a, b) => (new Date(a.timestamp).getTime() || 0) - (new Date(b.timestamp).getTime() || 0))
 			.map(item => JSON.stringify(item));
 		{% endif %}
 
