@@ -8,6 +8,24 @@ See this article for more details: [Using Google Forms for Jekyll Comments, Revi
 
 Images of all of these features can be seen in the article linked above.
 
+### Adding to Jekyll
+
+The baisc idea is to copy `comment-section.html` to your `_includes` folder in your Jekyll project.
+
+Then use the following liquid statement on any page or layout template in which you want to add comments:
+
+```liquid
+{% include comment-section.html %}
+```
+
+Comments are stored with reference to the current page's url (via `page.url`), so if you have a page generated with comments and change the url later (adding a permalink or something), then it would not show the existing comments. You could update the Google Sheets to change the url though for existing commnets.
+
+If you have some other id you want to use instead of `page.url`, update the following line inside `comment-section.html`:
+
+```javascript
+var thisPageUrl = "{{ page.url }}";
+```
+
 ### Data Source
 
 If using Google Sheets + Google Forms as described in the [original article], you should have the following items in your `_config.yml` file:
