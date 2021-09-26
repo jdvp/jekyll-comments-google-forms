@@ -1,16 +1,18 @@
-var COMMENT_FORM_ID = ""; //TODO
-var COMMENT_SHEET_ID = ""; //TODO
-var RECAPTCHA_SECRET_KEY = ""; //TODO
+/**
+ * @OnlyCurrentDoc
+ */
+
+var RECAPTCHA_SECRET_KEY = ""; //TODO add this if using RECAPTCHA
 var RECAPTCHA_THRESHOLD = .4;
 
 function doGet(req) {
-  var url = req?.parameter?.url || null
+  var url = req?.parameter?.url || null;
 
   if (url == null) {
     return getError("Required URL Parameter is null");
   }
 
-  var sh = SpreadsheetApp.openById(COMMENT_SHEET_ID)
+  var sh = SpreadsheetApp.getActiveSheet();
   
   var headers = sh.getSheetValues(1, 1, 1, sh.getLastColumn())[0];
   var columnTimestamp = headers.findIndex(element => "timestamp".toUpperCase() === element.toUpperCase());
@@ -31,6 +33,13 @@ function doGet(req) {
   }
   if (columnComment < 0) {
     return getError("Can't find 'comment' column in Google Sheet");
+  }
+
+  var numRows = sh.getLastRow() - 1;
+  if (numRows == 0) {
+    return ContentService
+    .createTextOutput(JSON.stringify([]))
+    .setMimeType(ContentService.MimeType.JSON);
   }
 
   var values = sh.getSheetValues(2, 1, sh.getLastRow() - 1, sh.getLastColumn())
@@ -92,7 +101,7 @@ function doPost(req) {
     return getError("reCAPTCHA could not be verified");
   }
   */
-  
+
   var url = bodyData?.url || null;
   var name = bodyData?.name || null;
   var comment = bodyData?.comment || null;
@@ -107,31 +116,83 @@ function doPost(req) {
     return getError("POST body missing required 'comment' paramter (which must also be non-empty)");
   }
 
-  var form = FormApp.openById(COMMENT_FORM_ID);
-  var formItems = form.getItems();
-  var nameItem = formItems.find(item => item.getTitle().toUpperCase().includes("name".toUpperCase())) || null;
-  var urlItem = formItems.find(item => item.getTitle().toUpperCase().includes("article url".toUpperCase())) || null;
-  var commentItem = formItems.find(item => item.getTitle().toUpperCase().includes("comment".toUpperCase())) || null;
+  var sh = SpreadsheetApp.getActiveSheet();
+  var headers = sh.getSheetValues(1, 1, 1, sh.getLastColumn())[0];
+  var columnTimestamp = headers.findIndex(element => "timestamp".toUpperCase() === element.toUpperCase());
+  var columnUrl = headers.findIndex(element => element.toUpperCase().includes("url".toUpperCase()));
+  var columnName = headers.findIndex(element => "name".toUpperCase() === element.toUpperCase());
+  var columnComment = headers.findIndex(element => "comment".toUpperCase() === element.toUpperCase());
 
-  if (nameItem == null) {
-    return getError("Google Form appears to be misisng the 'Name' field");
+  /* Ensure required rows are there, technically isAuthor is not required, so we don't check for it at this point */
+  if (columnTimestamp < 0) {
+    return getError("Can't find 'timestamp' column in Google Sheet");
   }
-  if (urlItem == null) {
-    return getError("Google Form appears to be missing the 'Article Url' field");
+  if (columnUrl < 0) {
+    return getError("Can't find 'article url' column in Google Sheet");
   }
-  if (commentItem == null) {
-    return getError("Google Form appeaers to be misisng the 'Comment' field");
+  if (columnName < 0) {
+    return getError("Can't find 'name' column in Google Sheet");
+  }
+  if (columnComment < 0) {
+    return getError("Can't find 'comment' column in Google Sheet");
   }
 
-  var response = form.createResponse();
-  response.withItemResponse(nameItem.asTextItem().createResponse(name));
-  response.withItemResponse(urlItem.asTextItem().createResponse(url));
-  response.withItemResponse(commentItem.asParagraphTextItem().createResponse(comment));
+  var newRow = [];
+
+  for (let i = 0; i < sh.getLastColumn(); i++) {
+    switch(i) {
+      case columnTimestamp:
+        newRow.push(new Date());
+        break;
+      case columnUrl:
+        newRow.push(url);
+        break;
+      case columnName:
+        newRow.push(name);
+        break;
+      case columnComment:
+        newRow.push(comment);
+        break;
+      default:
+        newRow.push(null);
+    }
+  }
 
   try {
-    response.submit();
+    sh.appendRow(newRow);
     return doGet({ parameter : { url : url }});
   } catch {
     return getError("Submission failed, please try again in a bit.");
   }
+}
+
+/**
+ * Function used in Apps Script Editor to test functionality
+ * and grant permissions. If you want to validate output, you
+ * can change the url parameter below
+ */
+function testGetComments() {
+  var results = doGet({ parameter : { url : "test-url"}}).getContent();
+  Logger.log("doGet results:")
+  Logger.log(results);
+}
+
+/**
+ * Function used in Apps Script Editor to test functionality
+ * and grant permissions. If you want to validate output, you
+ * can change the url, name, and comment parameters below
+ */
+function testPostComment() {
+  var testResponse = {
+    postData : {
+      contents : JSON.stringify({
+        url : "test-url",
+        name: "test-name",
+        comment: "test-comment"
+      })
+    }
+  }
+  var results = doPost(testResponse).getContent();
+  Logger.log("doGet results:")
+  Logger.log(results);
 }
