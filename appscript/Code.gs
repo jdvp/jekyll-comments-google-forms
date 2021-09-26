@@ -193,6 +193,6 @@ function testPostComment() {
     }
   }
   var results = doPost(testResponse).getContent();
-  Logger.log("doGet results:")
+  Logger.log("doPost results:")
   Logger.log(results);
 }
