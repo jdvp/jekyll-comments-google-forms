@@ -1,7 +1,9 @@
 # jekyll-comments-google-forms
 
-Files necessary to add comments to Jekyll through use of Google Forms.
+Files necessary to add commenting functionality to Jekyll sites using Google Sheets as storage.
 
-To see how to use this file in your Jekyll project, take a look at this article I wrote: [Using Google Forms for Jekyll Comments]
+See this article for more details: [Using Google Forms for Jekyll Comments, Revisited]
 
-[Using Google Forms for Jekyll Comments]: https://jdvp.me/articles/Google-Forms-Jekyll-Comments
+# Configuration Options
+
+[Using Google Forms for Jekyll Comments, Revisited]: https://jdvp.me/articles/Google-Forms-Jekyll-Comments-Revisited
