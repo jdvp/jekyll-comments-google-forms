@@ -1,47 +1,47 @@
-{% comment %} 
+{%- comment -%} 
 	This section is to determine whether or not chunked comment loading is enabled.
 	By default this is turned ON. If the page has enabled or disabled this feature explicitly,
 	the individual page value is used. Otherwise the site's value, if any, is used.
-{% endcomment %}
-{% assign chunked_loading_enabled = true %}
-{% if page.chunked_comment_loading == false %}
-	{% assign chunked_loading_enabled = false %}
-{% else %}
-	{% if site.google_forms_comments.chunked_comment_loading == false and page.chunked_comment_loading != true %}
-		{% assign chunked_loading_enabled = false %}
-	{% endif %}
-{% endif %}
+{%- endcomment -%}
+{%- assign chunked_loading_enabled = true -%}
+{%- if page.chunked_comment_loading == false -%}
+	{%- assign chunked_loading_enabled = false -%}
+{%- else -%}
+	{%- if site.google_forms_comments.chunked_comment_loading == false and page.chunked_comment_loading != true -%}
+		{%- assign chunked_loading_enabled = false -%}
+	{%- endif -%}
+{%- endif -%}
 
-{% comment %} 
+{%- comment -%} 
 	This section is to determine whether or not lazy loading of the comments is enabled.
 	By default this is turned OFF. If the page has enabled or disabled this feature explicitly,
 	the individual page value is used. Otherwise the site's value, if any, is used.
-{% endcomment %}
-{% assign lazy_load_enabled = false %}
-{% if page.lazy_load_comments == true %}
-	{% assign lazy_load_enabled = true %}
-{% elsif site.google_forms_comments.lazy_load_comments == true %}
-	{% unless page.lazy_load_comments == false %}
-		{% assign lazy_load_enabled = true %}
-	{% endunless %}
-{% endif %}
+{%- endcomment -%}
+{%- assign lazy_load_enabled = false -%}
+{%- if page.lazy_load_comments == true -%}
+	{%- assign lazy_load_enabled = true -%}
+{%- elsif site.google_forms_comments.lazy_load_comments == true -%}
+	{%- unless page.lazy_load_comments == false -%}
+		{%- assign lazy_load_enabled = true -%}
+	{%- endunless -%}
+{%- endif -%}
 
-{% comment %} 
+{%- comment -%} 
 	This section is to determine whether or recaptcha is enabled.
-{% endcomment %}
-{% assign recaptcha_enabled = false %}
-{% if site.google_forms_comments.recaptcha_site_key %}
-	{% assign recaptcha_enabled = true %}
-{% endif %}
+{%- endcomment -%}
+{%- assign recaptcha_enabled = false -%}
+{%- if site.google_forms_comments.recaptcha_site_key -%}
+	{%- assign recaptcha_enabled = true -%}
+{%- endif -%}
 
-{% if site.comment-read or site.google_forms_comments.google_app_script %}
+{%- if site.comment-read or site.google_forms_comments.google_app_script -%}
 <script>
 
-	{% comment %}
+	{%- comment -%}
 		Helper functions used so that we can forego using jQuery 
 		functions. When appscripts is enabled, this allows us to
 		get rid of the jQuery dependency (for comments) altogether. 
-	{% endcomment %}
+	{%- endcomment -%}
 	function setText(elementId, textContent) {
 		document.getElementById(elementId).textContent = textContent;
 	};
@@ -89,108 +89,108 @@
 	};
 
 
-	{% comment %}
+	{%- comment -%}
 	/* Load Required 3rd-Party Scripts. We use the following: 
     	- jquery for DOM manipulation
     	- jquery-csv for parsing Google Sheets CSV data to JSON
     	- validator for escaping user-entered comments to prevent malicious code input in comments
 
     	Make sure to update these to the latest versions every once in a while. */
-    {% endcomment %}
+    {%- endcomment -%}
 
-	{% comment %}
+	{%- comment -%}
 	/* Initial load of the comments section contnet. This ensures that we are only loading
 	   JQuery and other scripts once we actually need them */
-    {% endcomment %}
+    {%- endcomment -%}
 	async function initialCommentLoad() {
-		{% unless site.google_forms_comments.google_app_script %}
-		{% comment %}
+		{%- unless site.google_forms_comments.google_app_script -%}
+		{%- comment -%}
 		/* Load JQuery */
-		{% endcomment %}
+		{%- endcomment -%}
 		var loadJquery = document.createElement("script");
 		loadJquery.type = "text/javascript";
 		loadJquery.src = "https://code.jquery.com/jquery-3.6.0.min.js";
 		document.head.appendChild(loadJquery);
-		{% endunless %}
+		{%- endunless -%}
 
-		{% if recaptcha_enabled %}
-		{% comment %}
+		{%- if recaptcha_enabled -%}
+		{%- comment -%}
 		/* Load Recaptcha */
-    	{% endcomment %}
+    	{%- endcomment -%}
 		var loadRecaptcha = document.createElement("script");
 		loadRecaptcha.src = "https://www.google.com/recaptcha/api.js?render={{ site.google_forms_comments.recaptcha_site_key }}";
 		document.head.appendChild(loadRecaptcha);
-		{% endif %} 
+		{%- endif -%} 
 
-		{% comment %}
+		{%- comment -%}
 		/* Load Validator (to ensure we don't run code from comments for example) */
-    	{% endcomment %}
+    	{%- endcomment -%}
 		var loadValidator = document.createElement("script");
 		loadValidator.src = "https://cdnjs.cloudflare.com/ajax/libs/validator/13.5.2/validator.min.js";
 		document.head.appendChild(loadValidator);
 
-		{% comment %}
+		{%- comment -%}
 		/* Await Scripts Loaded */
-    	{% endcomment %}
-		{% if recaptcha_enabled %}
+    	{%- endcomment -%}
+		{%- if recaptcha_enabled -%}
 		await loadRecaptcha.onload;
-		{% endif %} 
+		{%- endif -%} 
 		await loadValidator.onload;
 
-		{% if site.google_forms_comments.google_app_script %}
+		{%- if site.google_forms_comments.google_app_script -%}
 		reloadComments();
-		{% else %}
+		{%- else -%}
 		loadJquery.onload = function() {
-			{% comment %}
+			{%- comment -%}
 			/* We need to ensure that jQuery is ready before we can load JQuery CSV (used for .csv parsing) */
-    		{% endcomment %}
+    		{%- endcomment -%}
 			async function checkJQuery() {
 				if (typeof jQuery === "undefined") {
 					return false;
 				} else {
 					clearTimeout(interval);
 
-					{% comment %}
+					{%- comment -%}
 					/* Load JQuery CSV (need regular JQuery first) */
-					{% endcomment %}
+					{%- endcomment -%}
 					var loadJqueryCsv = document.createElement("script");
 					loadJqueryCsv.src = "https://cdnjs.cloudflare.com/ajax/libs/jquery-csv/1.0.11/jquery.csv.min.js";
 					document.head.appendChild(loadJqueryCsv);
 
-					{% comment %}
+					{%- comment -%}
 					/* Wait for JQuery CSV to finish loading */
-					{% endcomment %}
+					{%- endcomment -%}
 					await loadJqueryCsv.onload;
 
-					{% comment %}
+					{%- comment -%}
 					/* Now, load the comments */
-					{% endcomment %}
+					{%- endcomment -%}
 					reloadComments();
 				}
 			};
-			{% comment %}
+			{%- comment -%}
 			/* check if JQuery is ready every 250 MS
 			   this timer will be cleared after the check passes */
-			{% endcomment %}
+			{%- endcomment -%}
 			var interval = setInterval(checkJQuery, 250);
 		};
-		{% endif %}
+		{%- endif -%}
 	};
 
 	var thisPageUrl = "{{ page.url }}";
-	{% comment %}
+	{%- comment -%}
 	/*  Visbile comments are those already dislayed to the user.
 		Hidden comments are those that are already retrieved from Google Sheets but not shown yet (i.e. with a load more button visible).
 		Net new comments are those that have been added since the comment submit button was pressed. Usually this will be the single added
 		comment. */
-	{% endcomment %}
+	{%- endcomment -%}
 	var visibleComments = [];
 	var hiddenComments = [];
 	var netNewComments = [];
 
-	{% comment %}
+	{%- comment -%}
 	/* Format the comment's date to our desired format */
-	{% endcomment %}
+	{%- endcomment -%}
 	function formatDate(stringDate) {
 		var date = new Date(stringDate);
 		var dateOptions = { year: 'numeric', month: 'long', day: 'numeric'};
@@ -198,18 +198,18 @@
 		return `${date.toLocaleDateString("en-us", dateOptions)} at ${date.toLocaleTimeString("en-us", timeOptions)}`;
 	};
 
-	{% comment %}
+	{%- comment -%}
 	/* Called when the comments have been loaded or relaoded.
 	   Comments that we have already displayed on the page will be ignored */
-	{% endcomment %}
+	{%- endcomment -%}
 	async function displayComments(comments) {
 		show("comments-and-input");
 		hide("load-comments");
 		var hasVisibleComments = visibleComments.length > 0;
 
-		{% comment %}
+		{%- comment -%}
 		/* if we have no comments, show the 'no comments available' section */
-		{% endcomment %}
+		{%- endcomment -%}
 		if (comments == null || comments === "" || comments == []) {
 			if (!hasVisibleComments) {
 				show("no-comments");
@@ -219,19 +219,19 @@
 			return;
 		}
 
-		{% if site.google_forms_comments.google_app_script %}
+		{%- if site.google_forms_comments.google_app_script -%}
 		var newHiddneComments = comments
 			.sort((a, b) => (new Date(a.timestamp).getTime() || 0) - (new Date(b.timestamp).getTime() || 0))
 			.map(item => JSON.stringify(item));
-		{% else %}
-		{% comment %}
+		{%- else -%}
+		{%- comment -%}
 		/* Add headers so json objects are named properly */
-		{% endcomment %}
+		{%- endcomment -%}
 		comments = `timestamp,name,comment,isAuthor\n${comments}`;
 		var newHiddneComments = $.csv.toObjects(comments)
 			.sort((a, b) => (new Date(a.timestamp).getTime() || 0) - (new Date(b.timestamp).getTime() || 0))
 			.map(item => JSON.stringify(item));
-		{% endif %}
+		{%- endif -%}
 
 		if (hasVisibleComments) {
 			netNewComments = newHiddneComments
@@ -246,26 +246,26 @@
 		loadMoreComments(false || !hasVisibleComments);
 	};
 
-	{% comment %}
+	{%- comment -%}
 	/* Loads more comments if there are any left to display from those already loaded from the server */
-	{% endcomment %}
+	{%- endcomment -%}
 	function loadMoreComments(isLoadMoreAction) {
-		{% if chunked_loading_enabled  %}
+		{%- if chunked_loading_enabled  -%}
 			var newCommentsToDisplay = hiddenComments.slice(-5);
-		{% else %}
+		{%- else -%}
 			var newCommentsToDisplay = hiddenComments;
-		{% endif %}
+		{%- endif -%}
 
 		if (isLoadMoreAction) {
-			{% comment %}
+			{%- comment -%}
 			/* iterate over each comment that came from Google Sheets */
-			{% endcomment %}
+			{%- endcomment -%}
 			newCommentsToDisplay.reverse().forEach(element => displaySingleComment(element, true));
 			hiddenComments = hiddenComments.filter(item => !newCommentsToDisplay.includes(item) && !visibleComments.includes(item));
 		} else {
-			{% comment %}
+			{%- comment -%}
 			/* add the new comments if there are any */
-			{% endcomment %}
+			{%- endcomment -%}
 			netNewComments.forEach(element => displaySingleComment(element, false));
 			netNewComments = []
 		}
@@ -280,24 +280,24 @@
 	};
 
 	function displaySingleComment(element, isPrepend) {
-		{% comment %}
+		{%- comment -%}
 		/* don't re-add existing comments */
-		{% endcomment %}
+		{%- endcomment -%}
 		if (visibleComments.includes(element)) {
 			return;
 		}
 
 		var jsonElement = JSON.parse(element);
-		{% comment %}
+		{%- comment -%}
 		/* If the author was the one who commented back, add this 'verified' logic */
-		{% endcomment %}
+		{%- endcomment -%}
 		var verifiedAuthorTag = "";
 		if (jsonElement.isAuthor == true || jsonElement.isAuthor === "TRUE") {
 			verifiedAuthorTag = "&nbsp;<strong>(Author)</strong>";
 		}
-		{% comment %}
+		{%- comment -%}
 		/* Create the new item using HTML and append it to the user-visible comment section */
-		{% endcomment %}
+		{%- endcomment -%}
 		var newItem = document.createElement("div");
 		newItem.classList.add("comment-item");
 		newItem.innerHTML = `
@@ -314,14 +314,14 @@
 		fadeIn(newItem);
 		visibleComments.push(element);
 
-		{% comment %}
+		{%- comment -%}
 		/* Hide the 'no comments available' section since we have added a comment */
-		{% endcomment %}
+		{%- endcomment -%}
 		hide("no-comments");
 		show("num-comments-displayed");
 	};
 
-	{% if site.google_forms_comments.google_app_script %}
+	{%- if site.google_forms_comments.google_app_script -%}
 	function reloadComments() {
 		fetch(`{{ site.google_forms_comments.google_app_script }}?url=${thisPageUrl}`)
 		.then(response => response.json())
@@ -339,14 +339,14 @@
 		});
 		
 	};
-	{% else %}
-	{% comment %}
+	{%- else -%}
+	{%- comment -%}
 	/* Calls to the Google Sheets gviz API to load the comment data
 	   Since we are storing comments for all of our blog articles in one sheet, we filter
 	   by page URL. */
-	{% endcomment %}
+	{%- endcomment -%}
 	function reloadComments() {
-		{% comment %}
+		{%- comment -%}
 		/*
 		Use SQL in the gviz URL to load the correct csv.
 		In this implementation, columns are mapped to the following:
@@ -356,28 +356,28 @@
 			D - comment, the text left in the comment field
 			E - isAuthor, boolean indicating if the comment was left by the actual author
 		*/
-		{% endcomment %}
+		{%- endcomment -%}
 		var sqlStatement = encodeURIComponent(`SELECT A, C, D, E WHERE B = '${thisPageUrl}'`);
 		fetch(`{{ site.comment-read }}/gviz/tq?tqx=out:csv&sheet=comments&tq=${sqlStatement}&headers=0`)
 		.then(response => response.text())
 		.then(response => displayComments(response));
 	};
-	{% endif %}
+	{%- endif -%}
 
-	{% comment %}
+	{%- comment -%}
 	/* encodes the form data for http transport */
-	{% endcomment %}
+	{%- endcomment -%}
 	const encodeFormData = (data) => {
 	    return Object.keys(data)
 	        .map(key => encodeURIComponent(key) + '=' + encodeURIComponent(data[key]))
 	        .join('&');
 	};
 
-	{% if recaptcha_enabled %}
+	{%- if recaptcha_enabled -%}
 	function checkRecaptcha() {
-		{% comment %}
+		{%- comment -%}
 			Disallow posting a new comment until this one has posted or failed.
-		{% endcomment %}
+		{%- endcomment -%}
 		disablePostCommentButton();
         grecaptcha.ready(function() {
         	var pageAction = "comment_submit_{{ page.title }}".replace(/[^A-Za-z/_]/g, "");
@@ -387,12 +387,12 @@
         });
         return false;
     };
-	{% endif %}
+	{%- endif -%}
 
-	{% comment %}
+	{%- comment -%}
 	/* Posts a comment */
-	{% endcomment %}
-	{% if site.google_forms_comments.google_app_script %}
+	{%- endcomment -%}
+	{%- if site.google_forms_comments.google_app_script -%}
 	function postComment(recaptchaToken) {
 		disablePostCommentButton();
 		var username = getValue("comment-name");
@@ -431,7 +431,7 @@
 
 		return false;
 	};
-	{% else %}
+	{%- else -%}
 	function postComment(recaptchaToken) {
 		disablePostCommentButton();
 		var username = getValue("comment-name");
@@ -458,17 +458,17 @@
 
 		return false;
 	};
-	{% endif %}
+	{%- endif -%}
 
-	{% unless lazy_load_enabled %}
+	{%- unless lazy_load_enabled -%}
 		initialCommentLoad();
-	{% endunless %}
+	{%- endunless -%}
 </script>
-{% comment %}
+{%- comment -%}
 <!--
 	HTML for displaying the actual comment section.
 	It has a state for oth when the article has comments and when it does not. -->
-{% endcomment %}
+{%- endcomment -%}
 <h4 class="post-subtitle">Comments</h4>
 <div id="load-comments" class="comments">
 	<button class="comment-button" onclick="initialCommentLoad()">Load Comments</button>
@@ -486,37 +486,37 @@
 	<div class="comments">
 		<div class="comment-info-text">
 			<p>Note that I may remove comments for any reason, so try to be civil. If you are looking for a response to your comment, either leave your email address or check back on this page periodically.</p>
-			{% if site.google_forms_comments.google_app_script %}
+			{%- if site.google_forms_comments.google_app_script -%}
 			<p id="comment-submit-error"></p>
-			{% endif %}
+			{%- endif -%}
 		</div>	
 		<div class="comments-form">
-			{% if recaptcha_enabled %}
+			{%- if recaptcha_enabled -%}
 			<form onsubmit="return checkRecaptcha()" id="comment-form" autocomplete="off">
-			{% else %}
+			{%- else -%}
 			<form onsubmit="return postComment()" id="comment-form" autocomplete="off">
-			{% endif %}
+			{%- endif -%}
 				<ul>
 					<li><input id="comment-name" name="username" type="text" placeholder="Name" required="" value=""></li>
 					<li><textarea id="comment-comment" name="comment" placeholder="Comment" required=""></textarea></li>
 					<li><button id="comment-submit" type="submit" class="comment-button">Post</button></li>
 				</ul>
-				{% if recaptcha_enabled %}
+				{%- if recaptcha_enabled -%}
 				<p id="comment-recaptcha-disclaimer">This site is protected by reCAPTCHA and the Google
 				    <a href="https://policies.google.com/privacy">Privacy Policy</a> and
 				    <a href="https://policies.google.com/terms">Terms of Service</a> apply.
-				 {% endif %}
+				 {%- endif -%}
 				<p>
 			</form>
 		</div>
 	</div>
 </div>
-{% comment %}
+{%- comment -%}
 <!-- 
 	Styling information.
 	This might typically be in an scss file but is added here so only a single
 	file needs to be added to a project trying to implement this feature. -->
-{% endcomment %}
+{%- endcomment -%}
 <style>
 @import url("https://fonts.googleapis.com/css?family=Source+Sans+Pro");
 .comment-item {
@@ -701,13 +701,13 @@
 	min-height: 80px;
 }
 
-{% if recaptcha_enabled %}
-{% comment %}
+{%- if recaptcha_enabled -%}
+{%- comment -%}
 If you want to use the regular recaptcha badge (instead of the text currently below
 the submit button), remove this and the text disclaimer in the HTML above. Note that
 according to their FAQ page, one or the other must be displayed.
 https://developers.google.com/recaptcha/docs/faq#id-like-to-hide-the-recaptcha-badge.-what-is-allowed
-{% endcomment %}
+{%- endcomment -%}
 .grecaptcha-badge {
 	visibility: hidden;
 }
@@ -718,14 +718,14 @@ https://developers.google.com/recaptcha/docs/faq#id-like-to-hide-the-recaptcha-b
     font-size: .7em;
 	font-family: "Source Sans Pro", sans-serif;
 }
-{% endif %}
+{%- endif -%}
 
-{% if site.google_forms_comments.google_app_script %}
+{%- if site.google_forms_comments.google_app_script -%}
 #comment-submit-error {
 	color: red;
 	display: none;
 }
-{% endif %}
+{%- endif -%}
 
 .comment-info-text {
 	letter-spacing: 0.5px;
@@ -749,14 +749,14 @@ https://developers.google.com/recaptcha/docs/faq#id-like-to-hide-the-recaptcha-b
 	justify-content: center;
 }
 
-{% if lazy_load_enabled %}
+{%- if lazy_load_enabled -%}
 #comments-and-input {
 	display: none;
 }
-{% else %}
+{%- else -%}
 #load-comments {
 	display: none;
 }
-{% endif %}
+{%- endif -%}
 </style>
-{% endif %}
+{%- endif -%}
