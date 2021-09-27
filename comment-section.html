@@ -325,7 +325,18 @@
 	function reloadComments() {
 		fetch(`{{ site.google_forms_comments.google_app_script }}?url=${thisPageUrl}`)
 		.then(response => response.json())
-		.then(response => displayComments(response));
+		.then(response => {
+			var error = response?.error || null;
+			if (error != null) {
+				console.error(error);
+				setText("comment-submit-error", error);
+				show("comment-submit-error");
+			} else {
+				setText("comment-submit-error", '');
+				hide("comment-submit-error");
+				displayComments(response);
+			}
+		});
 		
 	};
 	{% else %}
