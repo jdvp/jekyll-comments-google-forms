@@ -76,10 +76,15 @@
 		}, 50);
 	};
 
-	function disablePostCommentButton() {
-		var postCommentButton = document.getElementById("comment-submit");
+
+	function disableButtonWithLoader(elementId) {
+		var postCommentButton = document.getElementById(elementId);
 		postCommentButton.disabled = true;
-		setText("comment-submit", "\xa0");
+		setText(elementId, "\xa0");
+	}
+
+	function disablePostCommentButton() {
+		disableButtonWithLoader("comment-submit");
 	};
 
 	function enablePostCommentButton() {
@@ -103,6 +108,7 @@
 	   JQuery and other scripts once we actually need them */
     {%- endcomment -%}
 	async function initialCommentLoad() {
+		disableButtonWithLoader("load-comment-button");
 		{%- unless site.google_forms_comments.google_app_script -%}
 		{%- comment -%}
 		/* Load JQuery */
@@ -471,7 +477,7 @@
 {%- endcomment -%}
 <h4 class="post-subtitle">Comments</h4>
 <div id="load-comments" class="comments">
-	<button class="comment-button" onclick="initialCommentLoad()">Load Comments</button>
+	<button id="load-comment-button" class="comment-button" onclick="initialCommentLoad()">Load Comments</button>
 </div>
 <div id="comments-and-input">
 	<div id="comment-section" class="comments">
@@ -606,8 +612,8 @@
 	position: relative;
 }
 
-#comment-submit:disabled::after,
-#comment-submit[disabled]::after {
+.comment-button:disabled::after,
+.comment-button[disabled]::after {
     content: "";
     position: absolute;
     width: 16px;
