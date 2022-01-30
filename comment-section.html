@@ -34,6 +34,16 @@
 	{%- assign recaptcha_enabled = true -%}
 {%- endif -%}
 
+
+{%- comment -%} 
+	This section is to determine whether or comment replies are enabled.
+{%- endcomment -%}
+{%- assign comment_replies_enabled = false -%}
+{%- if site.google_forms_comments.comment_replies_enabled == true -%}
+	{%- assign comment_replies_enabled = true -%}
+{%- endif -%}
+
+
 {%- if site.comment-read or site.google_forms_comments.google_app_script -%}
 <script>
 
@@ -187,6 +197,9 @@
 	};
 
 	var thisPageUrl = "{{ page.url }}";
+	const EXTRA_INFO_START = "chunkedCommentInfoStart";
+	const EXTRA_INFO_END = "chunkedCommentInfoEnd";
+
 	{%- comment -%}
 	/*  Visbile comments are those already dislayed to the user.
 		Hidden comments are those that are already retrieved from Google Sheets but not shown yet (i.e. with a load more button visible).
@@ -196,6 +209,9 @@
 	var visibleComments = [];
 	var hiddenComments = [];
 	var netNewComments = [];
+	{%- if comment_replies_enabled -%}
+	var commentIds = new Set();
+	{%- endif -%}
 
 	{%- comment -%}
 	/* Format the comment's date to our desired format */
@@ -228,8 +244,18 @@
 			return;
 		}
 
+		{%- if comment_replies_enabled -%}
+		commentIds = new Set();
+		{%- endif -%}
+
 		{%- if site.google_forms_comments.google_app_script -%}
-		var newHiddneComments = comments
+		var newHiddenComments = comments
+			{%- if comment_replies_enabled -%}
+			.map(item => {
+				commentIds.add(Date.parse(item.timestamp)?.toString());
+				return item;
+			})
+			{%- endif -%}
 			.sort((a, b) => (new Date(a.timestamp).getTime() || 0) - (new Date(b.timestamp).getTime() || 0))
 			.map(item => JSON.stringify(item));
 		{%- else -%}
@@ -237,18 +263,24 @@
 		/* Add headers so json objects are named properly */
 		{%- endcomment -%}
 		comments = `timestamp,name,comment,isAuthor\n${comments}`;
-		var newHiddneComments = $.csv.toObjects(comments)
+		var newHiddenComments = $.csv.toObjects(comments)
+			{%- if comment_replies_enabled -%}
+			.map(item => {
+				commentIds.add(Date.parse(item.timestamp)?.toString());
+				return item;
+			})
+			{%- endif -%}
 			.sort((a, b) => (new Date(a.timestamp).getTime() || 0) - (new Date(b.timestamp).getTime() || 0))
 			.map(item => JSON.stringify(item));
 		{%- endif -%}
 
 		if (hasVisibleComments) {
-			netNewComments = newHiddneComments
+			netNewComments = newHiddenComments
 				.filter(item => !visibleComments.includes(item))
 				.filter(item => !hiddenComments.includes(item));
 		}
 
-		hiddenComments = newHiddneComments
+		hiddenComments = newHiddenComments
 			.filter(item => !visibleComments.includes(item))
 			.filter(item => !netNewComments.includes(item));
 
@@ -288,6 +320,68 @@
 		}
 	};
 
+	{%- if comment_replies_enabled -%}
+	var currentFadeItem = null;
+
+	function fadeColor(element) {
+		if (currentFadeItem != null) {
+			clearInterval(currentFadeItem);
+			currentFadeItem = null;
+		}
+
+		var duration = 1000;
+		var step = 25;
+		let opacity = 1;
+		const timer = setInterval(function() {
+		  opacity -= (1 / (duration / step));
+		  if (opacity <= 0) {
+		    clearInterval(timer);
+		    currentFadeItem = null;
+		    opacity = 0;
+		  }
+		  element.style.background = "rgba(3, 155, 229, "+ opacity +")";
+		}, step);
+		currentFadeItem = timer;
+	};
+
+	function smoothScrollTo(element) {
+		element.scrollIntoView({
+		  behavior: "smooth",
+		  block: "start",
+		  inline: "nearest"
+		});
+	};
+
+	function jumpToComment(commentId) {
+		var element = document.getElementsByClassName("" + commentId)[0];
+		while(element == null && hiddenComments.length > 0) {
+			loadMoreComments(true);
+			element = document.getElementsByClassName("" + commentId)[0];
+		}
+		if (element != null) {
+			smoothScrollTo(element);
+			fadeColor(element);
+		}
+	};
+
+	function clearCommentReplyItem() {
+		document.getElementById("comment-reply-info").innerHTML = ``;
+	};
+
+	function replyToComment(commentId) {
+		document.getElementById("comment-reply-info").innerHTML = `<small class="comment-reply-clear" onclick="clearCommentReplyItem()">Ⓧ&nbsp;&nbsp;&nbsp;</small><small onClick="jumpToComment('${commentId}')">Replying to comment <a id="reply-to-comment-id">${commentId}</a></small>`;
+		smoothScrollTo(document.getElementsByClassName("comments-form")[0]);
+	};
+	{%- endif -%}
+
+	function getCommentInfo(comment) {
+		var extraCommentInfo = comment?.match(EXTRA_INFO_START + ".+" + EXTRA_INFO_END);
+		return {
+			text : comment?.replace(extraCommentInfo, ""),
+			extraCommentInfo : JSON.parse(extraCommentInfo?.toString()?.replace(EXTRA_INFO_START, "")?.replace(EXTRA_INFO_END, "") ?? "{}")
+		};
+	};
+
 	function displaySingleComment(element, isPrepend) {
 		{%- comment -%}
 		/* don't re-add existing comments */
@@ -297,6 +391,7 @@
 		}
 
 		var jsonElement = JSON.parse(element);
+		var comment = getCommentInfo(jsonElement.comment);
 		{%- comment -%}
 		/* If the author was the one who commented back, add this 'verified' logic */
 		{%- endcomment -%}
@@ -309,10 +404,31 @@
 		{%- endcomment -%}
 		var newItem = document.createElement("div");
 		newItem.classList.add("comment-item");
+		{%- if comment_replies_enabled -%}
+		newItem.classList.add("reply-item");
+		var commentReplyId = "" + Date.parse(jsonElement.timestamp);
+		newItem.classList.add(commentReplyId);
+		var replyToHtml = null;
+		var replyId = comment?.extraCommentInfo?.replyToCommentId;
+		if (replyId != null && replyId != "" && commentIds.has(replyId)) {
+			replyToHtml = `<p class="comemnt-reply-id" onclick="jumpToComment('${replyId}')"><<< ${replyId}</p>`;
+		}
+		var currentCommentReplyButton = `<span class="comment-reply-button" onclick="replyToComment(${commentReplyId})"><img />Reply</span>`;
+		{%- endif -%}
+
 		newItem.innerHTML = `
-			<p class="commenter-name">${validator.escape(jsonElement.name.toString())}${verifiedAuthorTag}<small>${formatDate(jsonElement.timestamp)}</small></p>
+			<p class="commenter-name">${validator.escape(jsonElement.name.toString())}${verifiedAuthorTag}
+				<small>${formatDate(jsonElement.timestamp)}
+				{%- if comment_replies_enabled -%}
+				${currentCommentReplyButton ?? ""}
+				{%- endif -%}
+				</small>
+			</p>
 			<div>
-					<p>${validator.escape(jsonElement.comment.toString()).replace(new RegExp('\r?\n','g'), '<br />')}</p>
+				{%- if comment_replies_enabled -%}
+				${replyToHtml ?? ""}
+				{%- endif -%}
+				<p>${validator.escape(comment?.text?.toString()).replace(new RegExp('\r?\n','g'), '<br />')}</p>
 			</div>
 		`.trim();
 		if (isPrepend) {
@@ -398,6 +514,26 @@
     };
 	{%- endif -%}
 
+
+	function getCommentContent() {
+		var comment = getValue("comment-comment")?.toString();
+
+		var extraCommentInfo = {};
+
+		{%- if comment_replies_enabled -%}
+		var replyToCommentId = document?.getElementById("reply-to-comment-id")?.text;
+		if (replyToCommentId != null && replyToCommentId != "") {
+			extraCommentInfo.replyToCommentId = replyToCommentId;
+		}
+		{%- endif -%}
+
+		if (Object.keys(extraCommentInfo).length !== 0) {
+			comment = EXTRA_INFO_START + JSON.stringify(extraCommentInfo) + EXTRA_INFO_END + comment;
+		}
+
+		return comment;
+	};
+
 	{%- comment -%}
 	/* Posts a comment */
 	{%- endcomment -%}
@@ -405,7 +541,7 @@
 	function postComment(recaptchaToken) {
 		disablePostCommentButton();
 		var username = getValue("comment-name");
-		var comment = getValue("comment-comment");
+		var comment = getCommentContent();
 
 		fetch(`{{ site.google_forms_comments.google_app_script }}`, {
 		  method: 'POST',
@@ -433,6 +569,9 @@
 				setText("comment-submit-error", '');
 				hide("comment-submit-error");
 				displayComments(response);
+				{%- if comment_replies_enabled -%}
+				clearCommentReplyItem();
+				{%- endif -%}
 			}
 		})
 		.catch(error => {console.log(error);})
@@ -444,7 +583,7 @@
 	function postComment(recaptchaToken) {
 		disablePostCommentButton();
 		var username = getValue("comment-name");
-		var comment = getValue("comment-comment");
+		var comment = getCommentContent();
 
 		fetch(`{{ site.comment-post }}/formResponse`, {
 		  method: 'POST',
@@ -460,6 +599,9 @@
 		}).then(response => {
 			setValue("comment-name", '');
 			setValue("comment-comment", '');
+			{%- if comment_replies_enabled -%}
+			clearCommentReplyItem();
+			{%- endif -%}
 			reloadComments();
 		})
 		.catch(error => {console.log(error);})
@@ -506,7 +648,12 @@
 			<form onsubmit="return postComment()" id="comment-form" autocomplete="off">
 			{%- endif -%}
 				<ul>
-					<li><input id="comment-name" name="username" type="text" placeholder="Name" required="" value=""></li>
+					<li>
+						<input id="comment-name" name="username" type="text" placeholder="Name" required="" value="">
+						{%- if comment_replies_enabled -%}
+						<p id="comment-reply-info"></p>
+						{%- endif -%}
+					</li>
 					<li><textarea id="comment-comment" name="comment" placeholder="Comment" required=""></textarea></li>
 					<li><button id="comment-submit" type="submit" class="comment-button">Post</button></li>
 				</ul>
@@ -568,6 +715,57 @@
 	text-decoration: none;
 	font-size: 1em;
 	font-weight: 700;
+}
+
+{%- if comment_replies_enabled -%}
+.comment-reply-button {
+	float: right;
+	cursor: pointer;
+}
+
+.comment-reply-button img {
+	display: inline;
+	vertical-align: middle;
+	width: 1.2em;
+	height: 1.2em;
+	margin: 0;
+	content:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 0 24 24' width='24px' fill='%23999999'%3E%3Cpath d='M0 0h24v24H0z' fill='none'/%3E%3Cpath d='M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z'/%3E%3C/svg%3E");
+}
+
+.comment-reply-button:hover {
+	color: #e91e63;
+}
+
+.comment-reply-button:hover img {
+	content:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' height='24px' viewBox='0 0 24 24' width='24px' fill='%23e91e63'%3E%3Cpath d='M0 0h24v24H0z' fill='none'/%3E%3Cpath d='M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z'/%3E%3C/svg%3E");
+}
+
+.comemnt-reply-id {
+	color: #e91e63;
+	font-size: .9em;
+	cursor: pointer;
+}
+
+#comment-reply-info {
+	float: right;
+	font-size: .9em;
+	color: #e91e63;
+	cursor: pointer;
+}
+
+#comment-reply-info small {
+	vertical-align: middle;
+}
+
+.comment-reply-clear {
+	color: #e91e63;
+	font-size: 1.1em;
+	cursor: pointer;
+}
+{%- endif -%}
+
+#comment-reply-info p {
+	margin: 0;
 }
 
 .comments-form {
