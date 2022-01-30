@@ -229,7 +229,7 @@
 		}
 
 		{%- if site.google_forms_comments.google_app_script -%}
-		var newHiddneComments = comments
+		var newHiddenComments = comments
 			.sort((a, b) => (new Date(a.timestamp).getTime() || 0) - (new Date(b.timestamp).getTime() || 0))
 			.map(item => JSON.stringify(item));
 		{%- else -%}
@@ -237,18 +237,18 @@
 		/* Add headers so json objects are named properly */
 		{%- endcomment -%}
 		comments = `timestamp,name,comment,isAuthor\n${comments}`;
-		var newHiddneComments = $.csv.toObjects(comments)
+		var newHiddenComments = $.csv.toObjects(comments)
 			.sort((a, b) => (new Date(a.timestamp).getTime() || 0) - (new Date(b.timestamp).getTime() || 0))
 			.map(item => JSON.stringify(item));
 		{%- endif -%}
 
 		if (hasVisibleComments) {
-			netNewComments = newHiddneComments
+			netNewComments = newHiddenComments
 				.filter(item => !visibleComments.includes(item))
 				.filter(item => !hiddenComments.includes(item));
 		}
 
-		hiddenComments = newHiddneComments
+		hiddenComments = newHiddenComments
 			.filter(item => !visibleComments.includes(item))
 			.filter(item => !netNewComments.includes(item));
 
