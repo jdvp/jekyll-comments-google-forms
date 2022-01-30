@@ -90,13 +90,28 @@ If the page's front-matter value for `lazy_load_comments` differs from the confi
 
 This feature can be enabled when using the Google Sheets + Google Apps Script. 
 
-After adding the relevent secret key to the Google Apps Script `RECAPTCHA_SECRET_KEY` variable, the Jekyll site's `_config.yml` should have the site key added in the following variable:
+After adding the relevant secret key to the Google Apps Script `RECAPTCHA_SECRET_KEY` variable, the Jekyll site's `_config.yml` should have the site key added in the following variable:
 ```yml
 google_forms_comments:
   recaptcha_site_key: Site Key Here
 ```
 
 For more specific details on setup required, please see the reCAPTCHA section of [Using Google Forms for Jekyll Comments, Revisited]
+
+
+### Comment replies
+
+This feature allows users to reply to other comments directly which gives more context to the comments. To see a preview of this feature, see the January 29 update on the [Using Google Forms for Jekyll Comments, Revisited] article.
+
+This feature is set using the `comment_replies_enabled` option and is disabled by default.
+```yml codeCopyEnabled
+google_forms_comments:
+  comment_replies_enabled: true
+```
+
+If you happen to enable the feature for your site and later turn it off, everything should still work as expected. In the very worst case, you would need to remove extra data from the beginning of comments that had been replies to other comments, but that does not currently appear to be necessary.
+
+Deleting comments that are being replied to also ensures that the replies no longer try to link to the deleted comment.
 
 
 [Using Google Forms for Jekyll Comments, Revisited]: https://jdvp.me/articles/Google-Forms-Jekyll-Comments-Revisited
