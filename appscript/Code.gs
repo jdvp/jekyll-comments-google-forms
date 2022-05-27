@@ -87,8 +87,7 @@ function doGet(req) {
 }
 
 function getError(errorText) {
-  var cache = CacheService.getScriptCache();
-  cache.removeAll([SHEET_CACHE_KEY, SHEET_CAHCE_HEADERS_KEY])
+  clearCachedData();
   return ContentService
     .createTextOutput(JSON.stringify({
       "error": errorText
@@ -129,8 +128,7 @@ function doPost(req) {
     }
   }
 
-  var cache = CacheService.getScriptCache();
-  cache.removeAll([SHEET_CACHE_KEY, SHEET_CAHCE_HEADERS_KEY])
+  clearCachedData();
 
   var url = bodyData?.url || null;
   var name = bodyData?.name || null;
@@ -227,6 +225,19 @@ function testPostComment() {
     }
   }
   var results = doPost(testResponse).getContent();
-  Logger.log("doPost results:")
+  Logger.log("doPost results:");
   Logger.log(results);
+}
+
+/**
+ * Function that can be used to manually clear the cache
+ */
+function clearCachedData() {
+  var cache = CacheService.getScriptCache();
+  cache.removeAll([SHEET_CACHE_KEY, SHEET_CAHCE_HEADERS_KEY]);
+}
+
+function onEdit(e) {
+  clearCachedData();
+  Logger.log("Spreadsheet was edited, so cache was cleared");
 }
