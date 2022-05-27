@@ -113,7 +113,22 @@ If you happen to enable the feature for your site and later turn it off, everyth
 
 Deleting comments that are being replied to also ensures that the replies no longer try to link to the deleted comment.
 
+### Comment caching
+
+This feature only applies when using Google Apps Script. 
+
+Comment data is now cached for 1 hour after a successful GET call retrieves comment data while using the AppsScript method. This cache is cleared in any of the following scenarios:
+* An hour elapses
+* A new comment is added via API
+* The underlying spreadsheet or form are updated manually
+* An error occurs when either adding or retrieving comments
+
+This seems to significantly speed up time to load comments when cached data is available as shown in the [v2.2.0 release notes].
+
+Although this feature is on by default, you can disable it by setting the `CACHING_ENABLED` variable in `Code.gs` to `false`.
+
 
 [Using Google Forms for Jekyll Comments, Revisited]: https://jdvp.me/articles/Google-Forms-Jekyll-Comments-Revisited
 [original article]: https://jdvp.me/articles/Google-Forms-Jekyll-Comments
 [this article]: https://jdvp.me/articles/Google-Forms-Jekyll-Comments
+[v2.2.0 release notes]: https://github.com/jdvp/jekyll-comments-google-forms/releases/tag/v2.2.0
