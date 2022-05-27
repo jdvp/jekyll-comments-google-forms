@@ -124,11 +124,11 @@
 		disableButtonWithLoader("load-comment-button");
 		{%- unless site.google_forms_comments.google_app_script -%}
 		{%- comment -%}
-		/* Load JQuery */
+		/* Load JQuery, only needed in order to use JQuery CSV */
 		{%- endcomment -%}
 		var loadJquery = document.createElement("script");
 		loadJquery.type = "text/javascript";
-		loadJquery.src = "https://code.jquery.com/jquery-3.6.0.min.js";
+		loadJquery.src = "https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js";
 		document.head.appendChild(loadJquery);
 		{%- endunless -%}
 
