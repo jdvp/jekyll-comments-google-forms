@@ -230,13 +230,19 @@ function testPostComment() {
 }
 
 /**
- * Function that can be used to manually clear the cache
+ * Function that can be used to clear the cached comment data
  */
 function clearCachedData() {
   var cache = CacheService.getScriptCache();
   cache.removeAll([SHEET_CACHE_KEY, SHEET_CAHCE_HEADERS_KEY]);
 }
 
+/**
+ * Triggered when the spreadsheet is updated. 
+ * This is so that the comment cache is cleared when the spreadsheet
+ * is manually edited so that developer changes to the spreadsheet
+ * are reflected immediately and not hindered by the cache system.
+ */
 function onEdit(e) {
   clearCachedData();
   Logger.log("Spreadsheet was edited, so cache was cleared");
