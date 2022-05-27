@@ -124,7 +124,7 @@
 		disableButtonWithLoader("load-comment-button");
 		{%- unless site.google_forms_comments.google_app_script -%}
 		{%- comment -%}
-		/* Load JQuery, only needed in order to use JQuery CSV */
+        /* Load JQuery, only needed in order to use JQuery CSV */
 		{%- endcomment -%}
 		var loadJquery = document.createElement("script");
 		loadJquery.type = "text/javascript";
@@ -391,7 +391,7 @@
 		}
 
 		var jsonElement = JSON.parse(element);
-		var comment = getCommentInfo(jsonElement.comment);
+		var comment = getCommentInfo(jsonElement.comment?.toString());
 		{%- comment -%}
 		/* If the author was the one who commented back, add this 'verified' logic */
 		{%- endcomment -%}
