@@ -109,15 +109,15 @@
 
 	{%- comment -%}
 	/* Load Required 3rd-Party Scripts. We use the following: 
-    	- jquery for DOM manipulation
     	- jquery-csv for parsing Google Sheets CSV data to JSON
+    	- jquery as a required dependency for jquery-csv
     	- validator for escaping user-entered comments to prevent malicious code input in comments
 
     	Make sure to update these to the latest versions every once in a while. */
     {%- endcomment -%}
 
 	{%- comment -%}
-	/* Initial load of the comments section contnet. This ensures that we are only loading
+	/* Initial load of the comments section content. This ensures that we are only loading
 	   JQuery and other scripts once we actually need them */
     {%- endcomment -%}
 	async function initialCommentLoad() {
@@ -128,7 +128,7 @@
 		{%- endcomment -%}
 		var loadJquery = document.createElement("script");
 		loadJquery.type = "text/javascript";
-		loadJquery.src = "https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js";
+		loadJquery.src = "https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js";
 		document.head.appendChild(loadJquery);
 		{%- endunless -%}
 
@@ -145,7 +145,7 @@
 		/* Load Validator (to ensure we don't run code from comments for example) */
     	{%- endcomment -%}
 		var loadValidator = document.createElement("script");
-		loadValidator.src = "https://cdnjs.cloudflare.com/ajax/libs/validator/13.5.2/validator.min.js";
+		loadValidator.src = "https://cdnjs.cloudflare.com/ajax/libs/validator/13.7.0/validator.min.js";
 		document.head.appendChild(loadValidator);
 
 		{%- comment -%}
@@ -173,7 +173,7 @@
 					/* Load JQuery CSV (need regular JQuery first) */
 					{%- endcomment -%}
 					var loadJqueryCsv = document.createElement("script");
-					loadJqueryCsv.src = "https://cdnjs.cloudflare.com/ajax/libs/jquery-csv/1.0.11/jquery.csv.min.js";
+					loadJqueryCsv.src = "https://cdnjs.cloudflare.com/ajax/libs/jquery-csv/1.0.21/jquery.csv.min.js";
 					document.head.appendChild(loadJqueryCsv);
 
 					{%- comment -%}
