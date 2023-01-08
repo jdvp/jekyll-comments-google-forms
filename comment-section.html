@@ -413,7 +413,7 @@
 		if (replyId != null && replyId != "" && commentIds.has(replyId)) {
 			replyToHtml = `<p class="comemnt-reply-id" onclick="jumpToComment('${replyId}')"><<< ${replyId}</p>`;
 		}
-		var currentCommentReplyButton = `<span class="comment-reply-button" onclick="replyToComment(${commentReplyId})"><img />Reply</span>`;
+		var currentCommentReplyButton = `<span class="comment-reply-button" onclick="replyToComment(${commentReplyId})"><img></img>Reply</span>`;
 		{%- endif -%}
 
 		newItem.innerHTML = `
