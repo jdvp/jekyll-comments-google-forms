@@ -43,6 +43,17 @@
 	{%- assign comment_replies_enabled = true -%}
 {%- endif -%}
 
+{%- comment -%} 
+	This section is to determine if the comments should be displayed in reverse order from the default (e.g. shows oldest replies first) 
+{%- endcomment -%}
+{%- assign reverse_comment_order = false -%}
+{%- if page.reverse_comment_order == true -%}
+	{%- assign reverse_comment_order = true -%}
+{%- elsif site.google_forms_comments.reverse_comment_order == true -%}
+	{%- unless page.reverse_comment_order == false -%}
+		{%- assign reverse_comment_order = true -%}
+	{%- endunless -%}
+{%- endif -%}
 
 {%- if site.comment-read or site.google_forms_comments.google_app_script -%}
 <script>
@@ -128,7 +139,7 @@
 		{%- endcomment -%}
 		var loadJquery = document.createElement("script");
 		loadJquery.type = "text/javascript";
-		loadJquery.src = "https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js";
+		loadJquery.src = "https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js";
 		document.head.appendChild(loadJquery);
 		{%- endunless -%}
 
@@ -145,7 +156,7 @@
 		/* Load Validator (to ensure we don't run code from comments for example) */
     	{%- endcomment -%}
 		var loadValidator = document.createElement("script");
-		loadValidator.src = "https://cdnjs.cloudflare.com/ajax/libs/validator/13.9.0/validator.min.js";
+		loadValidator.src = "https://cdnjs.cloudflare.com/ajax/libs/validator/13.11.0/validator.min.js";
 		document.head.appendChild(loadValidator);
 
 		{%- comment -%}
@@ -223,6 +234,14 @@
 		return `${date.toLocaleDateString("en-us", dateOptions)} at ${date.toLocaleTimeString("en-us", timeOptions)}`;
 	};
 
+	function sortComments(a, b) {
+		{%- if reverse_comment_order  -%}
+			return (new Date(b.timestamp).getTime() || 0) - (new Date(a.timestamp).getTime() || 0)
+		{%- else -%}
+			return (new Date(a.timestamp).getTime() || 0) - (new Date(b.timestamp).getTime() || 0)
+		{%- endif -%}
+	}
+
 	{%- comment -%}
 	/* Called when the comments have been loaded or relaoded.
 	   Comments that we have already displayed on the page will be ignored */
@@ -256,7 +275,7 @@
 				return item;
 			})
 			{%- endif -%}
-			.sort((a, b) => (new Date(a.timestamp).getTime() || 0) - (new Date(b.timestamp).getTime() || 0))
+			.sort((a, b) => sortComments(a, b))
 			.map(item => JSON.stringify(item));
 		{%- else -%}
 		{%- comment -%}
@@ -270,7 +289,7 @@
 				return item;
 			})
 			{%- endif -%}
-			.sort((a, b) => (new Date(a.timestamp).getTime() || 0) - (new Date(b.timestamp).getTime() || 0))
+			.sort((a, b) => sortComments(a, b))
 			.map(item => JSON.stringify(item));
 		{%- endif -%}
 
@@ -627,7 +646,11 @@
 <div id="comments-and-input">
 	<div id="comment-section" class="comments">
 		<p id="num-comments-displayed"></p>
+		{%- if reverse_comment_order  -%}
+		<button id="load-more-comments" class="comment-button" onclick="loadMoreComments(true)" type="button">Load Newer Comments</button>
+		{%- else -%}		
 		<button id="load-more-comments" class="comment-button" onclick="loadMoreComments(true)" type="button">Load Older Comments</button>
+		{%- endif -%}
 		<div id="no-comments" class="comment-info-text">
 			<p>There are currently no comments on this article, be the first to add one below</p>
 		</div>
