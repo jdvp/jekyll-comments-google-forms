@@ -247,3 +247,19 @@ function onEdit(e) {
   clearCachedData();
   Logger.log("Spreadsheet was edited, so cache was cleared");
 }
+
+/**
+ * Jumps to the first open row when the sheet is opened,
+ * althought there may be a slight delay.
+ * This is helpful if you want automatically scroll to the
+ * latest comment when you open the sheet. If you do not
+ * want this behavior, you can remove this method.
+ */
+function onOpen() {
+  let ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getActiveSheet();
+  // Jump further down in the page so that when we jump to the first open row, 
+  // it isn't at the very bottom of the screen
+  sheet.setActiveRange(sheet.getRange(sheet.getLastRow()+20,1));
+  sheet.setActiveRange(sheet.getRange(sheet.getLastRow()+1,1));
+}
