@@ -128,7 +128,7 @@
 		{%- endcomment -%}
 		var loadJquery = document.createElement("script");
 		loadJquery.type = "text/javascript";
-		loadJquery.src = "https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js";
+		loadJquery.src = "https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js";
 		document.head.appendChild(loadJquery);
 		{%- endunless -%}
 
@@ -145,7 +145,7 @@
 		/* Load Validator (to ensure we don't run code from comments for example) */
     	{%- endcomment -%}
 		var loadValidator = document.createElement("script");
-		loadValidator.src = "https://cdnjs.cloudflare.com/ajax/libs/validator/13.9.0/validator.min.js";
+		loadValidator.src = "https://cdnjs.cloudflare.com/ajax/libs/validator/13.11.0/validator.min.js";
 		document.head.appendChild(loadValidator);
 
 		{%- comment -%}
