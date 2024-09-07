@@ -145,7 +145,7 @@
 		/* Load Validator (to ensure we don't run code from comments for example) */
     	{%- endcomment -%}
 		var loadValidator = document.createElement("script");
-		loadValidator.src = "https://cdnjs.cloudflare.com/ajax/libs/validator/13.11.0/validator.min.js";
+		loadValidator.src = "https://cdnjs.cloudflare.com/ajax/libs/validator/13.12.0/validator.min.js";
 		document.head.appendChild(loadValidator);
 
 		{%- comment -%}
@@ -173,7 +173,7 @@
 					/* Load JQuery CSV (need regular JQuery first) */
 					{%- endcomment -%}
 					var loadJqueryCsv = document.createElement("script");
-					loadJqueryCsv.src = "https://cdnjs.cloudflare.com/ajax/libs/jquery-csv/1.0.21/jquery.csv.min.js";
+					loadJqueryCsv.src = "https://cdnjs.cloudflare.com/ajax/libs/jquery-csv/1.0.40/jquery.csv.min.js";
 					document.head.appendChild(loadJqueryCsv);
 
 					{%- comment -%}
