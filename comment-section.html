@@ -210,7 +210,7 @@
 	var hiddenComments = [];
 	var netNewComments = [];
 	{%- if comment_replies_enabled -%}
-	var commentIds = new Set();
+	var commentIdsToNamesMap = new Map();
 	{%- endif -%}
 
 	{%- comment -%}
@@ -245,14 +245,14 @@
 		}
 
 		{%- if comment_replies_enabled -%}
-		commentIds = new Set();
+		commentIdsToNamesMap.clear();
 		{%- endif -%}
 
 		{%- if site.google_forms_comments.google_app_script -%}
 		var newHiddenComments = comments
 			{%- if comment_replies_enabled -%}
 			.map(item => {
-				commentIds.add(Date.parse(item.timestamp)?.toString());
+				commentIdsToNamesMap.set(Date.parse(item.timestamp)?.toString(), item.name);
 				return item;
 			})
 			{%- endif -%}
@@ -266,7 +266,7 @@
 		var newHiddenComments = $.csv.toObjects(comments)
 			{%- if comment_replies_enabled -%}
 			.map(item => {
-				commentIds.add(Date.parse(item.timestamp)?.toString());
+				commentIdsToNamesMap.set(Date.parse(item.timestamp)?.toString(), item.name);
 				return item;
 			})
 			{%- endif -%}
@@ -410,8 +410,8 @@
 		newItem.classList.add(commentReplyId);
 		var replyToHtml = null;
 		var replyId = comment?.extraCommentInfo?.replyToCommentId;
-		if (replyId != null && replyId != "" && commentIds.has(replyId)) {
-			replyToHtml = `<p class="comemnt-reply-id" onclick="jumpToComment('${replyId}')"><<< ${replyId}</p>`;
+		if (replyId != null && replyId != "" && commentIdsToNamesMap.has(replyId)) {
+			replyToHtml = `<p class="comemnt-reply-id" onclick="jumpToComment('${replyId}')"><<< ${commentIdsToNamesMap.get(replyId) ?? replyId}</p>`;
 		}
 		var currentCommentReplyButton = `<span class="comment-reply-button" onclick="replyToComment(${commentReplyId})"><img></img>Reply</span>`;
 		{%- endif -%}
